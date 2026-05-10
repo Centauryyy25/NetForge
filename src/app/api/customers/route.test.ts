@@ -29,7 +29,7 @@ vi.mock("@/lib/utils", () => ({
   generateCustomerId: () => "YBY-2605-0001",
 }));
 
-import { POST } from "./route";
+import { POST, GET } from "./route";
 
 const adminSession = {
   user: { id: "1", role: "admin", name: "admin", email: "a@b.c" },
@@ -50,6 +50,8 @@ function makeReq(body: unknown) {
     body: JSON.stringify(body),
   });
 }
+
+const emptyCtx = { params: Promise.resolve({}) };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -74,7 +76,7 @@ describe("POST /api/customers — transactional provisioning", () => {
       return cb(tx);
     });
 
-    const res = await POST(makeReq(validBody));
+    const res = await POST(makeReq(validBody), emptyCtx);
     expect(res.status).toBe(201);
     expect(dbTransaction).toHaveBeenCalledOnce();
     expect(enqueueCreatePPPoE).toHaveBeenCalledOnce();
@@ -105,7 +107,7 @@ describe("POST /api/customers — transactional provisioning", () => {
       }
     });
 
-    const res = await POST(makeReq(validBody));
+    const res = await POST(makeReq(validBody), emptyCtx);
     expect(res.status).toBe(500);
     expect(txCommitted).toBe(false);
   });
@@ -122,8 +124,33 @@ describe("POST /api/customers — transactional provisioning", () => {
       return cb(tx);
     });
     const { pppoeUsername: _omit, ...bodyNoPppoe } = validBody;
-    const res = await POST(makeReq(bodyNoPppoe));
+    const res = await POST(makeReq(bodyNoPppoe), emptyCtx);
     expect(res.status).toBe(201);
     expect(enqueueCreatePPPoE).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/customers — auth-guard (FIX-003)", () => {
+  it("GET unauthenticated → 401", async () => {
+    authMock.mockResolvedValue(null);
+    const res = await GET(
+      new Request("http://localhost/api/customers"),
+      emptyCtx
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("POST as technician (non-admin/operator) → 403", async () => {
+    authMock.mockResolvedValue({
+      user: { id: "9", role: "technician", name: "tek", email: "t@b.c" },
+    });
+    const res = await POST(makeReq(validBody), emptyCtx);
+    expect(res.status).toBe(403);
+  });
+
+  it("POST unauthenticated → 401", async () => {
+    authMock.mockResolvedValue(null);
+    const res = await POST(makeReq(validBody), emptyCtx);
+    expect(res.status).toBe(401);
   });
 });
