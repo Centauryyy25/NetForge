@@ -25,8 +25,8 @@ vi.mock("@/db/schema/customers", () => ({ customers: {} }));
 vi.mock("@/db/schema/packages", () => ({ packages: {} }));
 vi.mock("@/lib/auth", () => ({ auth: authMock }));
 vi.mock("@/lib/queue/producer", () => ({ enqueueCreatePPPoE }));
-vi.mock("@/lib/utils", () => ({
-  generateCustomerId: () => "YBY-2605-0001",
+vi.mock("@/lib/ids", () => ({
+  nextCustomerNumber: async () => "YBY-01000",
 }));
 
 import { POST, GET } from "./route";

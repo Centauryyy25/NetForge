@@ -29,6 +29,20 @@
       "when": 1778392693829,
       "tag": "0003_aromatic_kang",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778393828605,
+      "tag": "0004_nebulous_winter_soldier",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1778393900000,
+      "tag": "0005_create_customer_sequence",
+      "breakpoints": true
     }
   ]
 }

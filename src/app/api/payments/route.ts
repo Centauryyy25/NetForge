@@ -5,7 +5,7 @@ import { customers } from "@/db/schema/customers";
 import { createPaymentSchema } from "@/validators/payment";
 import { requireAuth, requireRole } from "@/lib/auth-guard";
 import { withErrorHandler } from "@/lib/api-handler";
-import { generateInvoiceNumber } from "@/lib/utils";
+import { nextInvoiceNumber } from "@/lib/ids";
 import { enqueueWhatsAppBilling } from "@/lib/queue/producer";
 import { eq, type SQL } from "drizzle-orm";
 
@@ -55,7 +55,7 @@ export const POST = withErrorHandler(async (req) => {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
 
-  const invoiceNumber = generateInvoiceNumber();
+  const invoiceNumber = await nextInvoiceNumber();
 
   const newPayment = await db
     .insert(payments)

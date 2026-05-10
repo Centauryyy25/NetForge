@@ -6,7 +6,7 @@ import { packages } from "@/db/schema/packages";
 import { createCustomerSchema } from "@/validators/customer";
 import { requireAuth, requireRole } from "@/lib/auth-guard";
 import { withErrorHandler } from "@/lib/api-handler";
-import { generateCustomerId } from "@/lib/utils";
+import { nextCustomerNumber } from "@/lib/ids";
 import { generatePPPoEPassword } from "@/lib/crypto/password";
 import { enqueueCreatePPPoE } from "@/lib/queue/producer";
 import { eq } from "drizzle-orm";
@@ -36,7 +36,7 @@ export const POST = withErrorHandler(async (req) => {
 
   const data = result.data;
 
-  const customerId = generateCustomerId();
+  const customerId = await nextCustomerNumber();
   const now = new Date();
   const activeUntil = new Date(now);
   activeUntil.setMonth(now.getMonth() + 1);
