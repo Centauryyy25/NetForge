@@ -1,0 +1,1 @@
+ALTER TABLE "settings" ADD COLUMN "value_encrypted" boolean DEFAULT false NOT NULL;

@@ -43,6 +43,13 @@
       "when": 1778393900000,
       "tag": "0005_create_customer_sequence",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778406759862,
+      "tag": "0006_peaceful_vermin",
+      "breakpoints": true
     }
   ]
 }

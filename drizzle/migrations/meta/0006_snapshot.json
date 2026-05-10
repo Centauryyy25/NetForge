@@ -1,6 +1,6 @@
 {
-  "id": "419f7403-c187-4500-b190-bb596368c0f1",
-  "prevId": "fa3a6608-1b80-481f-9a07-2be17b9d0952",
+  "id": "f79fdcba-9641-4f4e-aaac-14f5ce5d9540",
+  "prevId": "419f7403-c187-4500-b190-bb596368c0f1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -568,6 +568,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "''"
+        },
+        "value_encrypted": {
+          "name": "value_encrypted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "updated_at": {
           "name": "updated_at",
