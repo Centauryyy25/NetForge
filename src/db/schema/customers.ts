@@ -6,6 +6,7 @@ export const customerStatusEnum = pgEnum("customer_status", [
   "inactive",
   "suspended",
   "terminated",
+  "provisioning_failed",
 ]);
 
 export const customers = pgTable("customers", {

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."customer_status" ADD VALUE 'provisioning_failed';

@@ -25,6 +25,7 @@ export interface BaseJobData {
 }
 
 export interface CreatePPPoEJob extends BaseJobData {
+  customerId: number;
   username: string;
   password: string;
   profile: string;

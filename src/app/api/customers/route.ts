@@ -62,42 +62,49 @@ export async function POST(req: Request) {
       ? await bcrypt.hash(plainPppoePassword, 10)
       : null;
 
-    const newCustomer = await db
-      .insert(customers)
-      .values({
-        customerId,
-        name: data.name,
-        address: data.address,
-        phone: data.phone,
-        email: data.email || null,
-        nik: data.nik || null,
-        packageId: data.packageId,
-        registrationDate: now.toISOString().split("T")[0],
-        activeUntil: activeUntil.toISOString().split("T")[0],
-        status: "active",
-        pppoeUsername: data.pppoeUsername || null,
-        pppoePasswordHash,
-        onuSn: data.onuSn || null,
-        notes: data.notes || null,
-      })
-      .returning();
-
-    if (data.pppoeUsername && plainPppoePassword) {
+    let profileName = "default";
+    if (data.pppoeUsername) {
       const pkg = await db.query.packages.findFirst({
         where: eq(packages.id, data.packageId),
       });
-
-      const profileName = pkg ? pkg.name.replace(/\s+/g, "-") : "default";
-
-      await enqueueCreatePPPoE({
-        username: data.pppoeUsername,
-        password: plainPppoePassword,
-        profile: profileName,
-        triggeredBy: parseInt(session.user.id),
-      });
+      profileName = pkg ? pkg.name.replace(/\s+/g, "-") : "default";
     }
 
-    return NextResponse.json({ data: newCustomer[0] }, { status: 201 });
+    const newCustomer = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(customers)
+        .values({
+          customerId,
+          name: data.name,
+          address: data.address,
+          phone: data.phone,
+          email: data.email || null,
+          nik: data.nik || null,
+          packageId: data.packageId,
+          registrationDate: now.toISOString().split("T")[0],
+          activeUntil: activeUntil.toISOString().split("T")[0],
+          status: "active",
+          pppoeUsername: data.pppoeUsername || null,
+          pppoePasswordHash,
+          onuSn: data.onuSn || null,
+          notes: data.notes || null,
+        })
+        .returning();
+
+      if (data.pppoeUsername && plainPppoePassword) {
+        await enqueueCreatePPPoE({
+          customerId: row.id,
+          username: data.pppoeUsername,
+          password: plainPppoePassword,
+          profile: profileName,
+          triggeredBy: parseInt(session.user.id),
+        });
+      }
+
+      return row;
+    });
+
+    return NextResponse.json({ data: newCustomer }, { status: 201 });
   } catch (error) {
     console.error("POST /api/customers error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
