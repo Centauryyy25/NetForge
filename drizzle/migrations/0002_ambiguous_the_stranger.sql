@@ -1,0 +1,1 @@
+ALTER TABLE "customers" ADD COLUMN "pppoe_password_hash" varchar(255);

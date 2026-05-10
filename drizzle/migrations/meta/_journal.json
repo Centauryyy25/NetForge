@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775459369050,
+      "tag": "0000_freezing_the_fallen",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775530997667,
+      "tag": "0001_lush_wrecking_crew",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778391836296,
+      "tag": "0002_ambiguous_the_stranger",
+      "breakpoints": true
+    }
+  ]
+}
