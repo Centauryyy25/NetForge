@@ -23,44 +23,34 @@ export const mikrotikWorker = new Worker(
         if (!password) {
           throw new Error("[CREATE_PPPOE] missing password in job payload");
         }
-        const result = await createPPPoEUser(username, password, profile);
-        if (!result.success) throw new Error(result.error);
-        return result;
+        await createPPPoEUser(username, password, profile);
+        return { ok: true };
       }
-      
+
       case JOB_NAMES.SUSPEND_PPPOE: {
-        const { username } = job.data;
-        const result = await suspendPPPoEUser(username);
-        if (!result.success) throw new Error(result.error);
-        return result;
+        await suspendPPPoEUser(job.data.username);
+        return { ok: true };
       }
-      
+
       case JOB_NAMES.ACTIVATE_PPPOE: {
-        const { username } = job.data;
-        const result = await activatePPPoEUser(username);
-        if (!result.success) throw new Error(result.error);
-        return result;
+        await activatePPPoEUser(job.data.username);
+        return { ok: true };
       }
-      
+
       case JOB_NAMES.DELETE_PPPOE: {
-        const { username } = job.data;
-        const result = await deletePPPoEUser(username);
-        if (!result.success) throw new Error(result.error);
-        return result;
+        await deletePPPoEUser(job.data.username);
+        return { ok: true };
       }
-      
+
       case JOB_NAMES.SET_QUEUE: {
         const { name, target, maxLimit } = job.data;
-        const result = await setSimpleQueue(name, target, maxLimit);
-        if (!result.success) throw new Error(result.error);
-        return result;
+        await setSimpleQueue(name, target, maxLimit);
+        return { ok: true };
       }
-      
+
       case JOB_NAMES.DELETE_QUEUE: {
-        const { name } = job.data;
-        const result = await deleteSimpleQueue(name);
-        if (!result.success) throw new Error(result.error);
-        return result;
+        await deleteSimpleQueue(job.data.name);
+        return { ok: true };
       }
 
       default:
