@@ -83,6 +83,22 @@ export async function getMikroTikConfig(): Promise<{
   };
 }
 
+/** Billing config — sourced from DB only. */
+export async function getBillingConfig(): Promise<{
+  dueDay: number;
+  companyName: string;
+  companyAddress: string;
+  companyPhone: string;
+}> {
+  const all = await getAllSettings();
+  return {
+    dueDay: Number(all[SETTING_KEYS.BILLING_DUE_DAY]) || 20,
+    companyName: all[SETTING_KEYS.BILLING_COMPANY_NAME] ?? "",
+    companyAddress: all[SETTING_KEYS.BILLING_COMPANY_ADDRESS] ?? "",
+    companyPhone: all[SETTING_KEYS.BILLING_COMPANY_PHONE] ?? "",
+  };
+}
+
 /** Fonnte config — sourced from DB only (no env fallback). */
 export async function getFonnteConfig(): Promise<{
   apiUrl: string;

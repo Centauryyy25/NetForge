@@ -34,21 +34,40 @@ export const PATCH = withErrorHandler<{ id: string }>(async (req, { params }) =>
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
+  const existing = await db.query.payments.findFirst({
+    where: eq(payments.id, paymentId),
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+  }
+
   const body = await req.json();
-  const { status, notes } = body;
+  const { status, paymentMethod, paymentDate, notes } = body;
+
+  // Prevent reverting paid status
+  if (existing.status === "paid" && status && status !== "paid") {
+    return NextResponse.json(
+      { error: "Pembayaran yang sudah lunas tidak bisa diubah statusnya" },
+      { status: 400 }
+    );
+  }
+
+  const updateData: Record<string, unknown> = {};
+  if (status) updateData.status = status;
+  if (notes !== undefined) updateData.notes = notes;
+  if (paymentMethod) updateData.paymentMethod = paymentMethod;
+  if (paymentDate) updateData.paymentDate = paymentDate;
+
+  // Set paidAt when marking as paid
+  if (status === "paid" && existing.status !== "paid") {
+    updateData.paidAt = new Date();
+  }
 
   const updated = await db
     .update(payments)
-    .set({
-      ...(status && { status }),
-      ...(notes !== undefined && { notes }),
-    })
+    .set(updateData)
     .where(eq(payments.id, paymentId))
     .returning();
-
-  if (!updated.length) {
-    return NextResponse.json({ error: "Payment not found" }, { status: 404 });
-  }
 
   return NextResponse.json({ data: updated[0] });
 });

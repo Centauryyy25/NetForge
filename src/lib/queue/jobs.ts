@@ -16,6 +16,8 @@ export const JOB_NAMES = {
   
   // Notification Jobs
   WHATSAPP_BILLING: "whatsapp-billing",
+  WHATSAPP_OVERDUE_REMINDER: "whatsapp-overdue-reminder",
+  MARK_OVERDUE: "mark-overdue",
 } as const;
 
 // Types
@@ -60,3 +62,14 @@ export interface WhatsAppBillingJob extends BaseJobData {
   amount: number;
   periodMonth: string;
 }
+
+export interface WhatsAppOverdueReminderJob extends BaseJobData {
+  customerPhone: string;
+  customerName: string;
+  invoiceNumber: string;
+  amount: number;
+  periodMonth: string;
+  dueDay: number;
+}
+
+export type MarkOverdueJob = BaseJobData;

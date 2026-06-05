@@ -7,7 +7,7 @@ import { requireAuth, requireRole } from "@/lib/auth-guard";
 import { withErrorHandler } from "@/lib/api-handler";
 import { nextInvoiceNumber } from "@/lib/ids";
 import { enqueueWhatsAppBilling } from "@/lib/queue/producer";
-import { eq, type SQL } from "drizzle-orm";
+import { eq, gte, lte, type SQL } from "drizzle-orm";
 
 export const GET = withErrorHandler(async (req) => {
   await requireAuth();
@@ -15,12 +15,20 @@ export const GET = withErrorHandler(async (req) => {
   const { searchParams } = new URL(req.url);
   const periodMonth = searchParams.get("periodMonth");
   const customerId = searchParams.get("customerId");
+  const status = searchParams.get("status");
+  const paymentMethod = searchParams.get("paymentMethod");
+  const dateFrom = searchParams.get("dateFrom");
+  const dateTo = searchParams.get("dateTo");
 
   const whereConditions: SQL[] = [];
   if (periodMonth) whereConditions.push(eq(payments.periodMonth, periodMonth));
   if (customerId && !isNaN(parseInt(customerId))) {
     whereConditions.push(eq(payments.customerId, parseInt(customerId)));
   }
+  if (status) whereConditions.push(eq(payments.status, status as "paid" | "pending" | "overdue" | "cancelled"));
+  if (paymentMethod) whereConditions.push(eq(payments.paymentMethod, paymentMethod));
+  if (dateFrom) whereConditions.push(gte(payments.paymentDate, dateFrom));
+  if (dateTo) whereConditions.push(lte(payments.paymentDate, dateTo));
 
   const data = await db.query.payments.findMany({
     where: (_payments, { and }) => and(...whereConditions),
