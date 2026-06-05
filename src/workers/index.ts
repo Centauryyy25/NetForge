@@ -1,4 +1,7 @@
-import "dotenv/config";
+if (process.env.NODE_ENV !== "production") {
+  await import("dotenv/config");
+}
+
 import { mikrotikWorker } from "./mikrotik.worker";
 import { notificationWorker } from "./notification.worker";
 import { notificationQueue } from "../lib/queue/producer";
@@ -30,10 +33,13 @@ notificationWorker.on("failed", (job, err) => {
   console.error(`❌ Notification job ${job?.id} failed:`, err.message);
 });
 
-// Handle graceful shutdown
-process.on("SIGINT", async () => {
+// Handle graceful shutdown (SIGINT for local, SIGTERM for Docker)
+async function shutdown() {
   console.log("\nClosing workers...");
   await mikrotikWorker.close();
   await notificationWorker.close();
   process.exit(0);
-});
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

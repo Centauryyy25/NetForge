@@ -1,0 +1,126 @@
+services:
+  # ── PostgreSQL ──────────────────────────────
+  postgres:
+    image: postgres:16-bookworm
+    container_name: siybynet-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: si_ybynet
+      POSTGRES_USER: si_ybynet
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U si_ybynet -d si_ybynet"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - internal
+
+  # ── Redis ───────────────────────────────────
+  redis:
+    image: redis:7-bookworm
+    container_name: siybynet-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - internal
+
+  # ── Database Migrations (run-once) ──────────
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: siybynet-migrate
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://si_ybynet:${POSTGRES_PASSWORD}@postgres:5432/si_ybynet
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["node", "node_modules/drizzle-kit/bin.cjs", "migrate"]
+    restart: "no"
+    networks:
+      - internal
+
+  # ── Next.js Web App ─────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: siybynet-web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      HOSTNAME: "0.0.0.0"
+      AUTH_URL: ${AUTH_URL}
+      AUTH_SECRET: ${AUTH_SECRET}
+      DATABASE_URL: postgresql://si_ybynet:${POSTGRES_PASSWORD}@postgres:5432/si_ybynet
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:8080/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - internal
+
+  # ── BullMQ Worker ───────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: siybynet-worker
+    restart: unless-stopped
+    entrypoint: ["node", "node_modules/tsx/dist/cli.mjs", "src/workers/index.ts"]
+    environment:
+      NODE_ENV: production
+      AUTH_SECRET: ${AUTH_SECRET}
+      DATABASE_URL: postgresql://si_ybynet:${POSTGRES_PASSWORD}@postgres:5432/si_ybynet
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    stop_grace_period: 30s
+    networks:
+      - internal
+
+volumes:
+  pgdata:
+    name: siybynet-pgdata
+  redisdata:
+    name: siybynet-redisdata
+
+networks:
+  internal:
+    name: siybynet-network
+    driver: bridge
