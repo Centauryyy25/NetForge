@@ -6,15 +6,18 @@ import { mikrotikWorker } from "./mikrotik.worker";
 import { notificationWorker } from "./notification.worker";
 import { notificationQueue } from "../lib/queue/producer";
 import { JOB_NAMES } from "../lib/queue/jobs";
+import { workerLogger } from "../lib/logger";
 
-console.log("🚀 Starting BullMQ Background Workers...");
+const log = workerLogger;
+
+log.info("Starting BullMQ background workers");
 
 mikrotikWorker.on("ready", () => {
-  console.log("✅ MikroTik worker is ready and listening to queue.");
+  log.info("MikroTik worker is ready");
 });
 
 notificationWorker.on("ready", async () => {
-  console.log("✅ Notification worker is ready and listening to queue.");
+  log.info("Notification worker is ready");
 
   // Schedule daily overdue check at 01:00 AM
   await notificationQueue.add(
@@ -22,20 +25,20 @@ notificationWorker.on("ready", async () => {
     {},
     { repeat: { pattern: "0 1 * * *" }, jobId: "daily-overdue-check" }
   );
-  console.log("📅 Scheduled daily overdue check at 01:00 AM");
+  log.info("Scheduled daily overdue check at 01:00 AM");
 });
 
 mikrotikWorker.on("failed", (job, err) => {
-  console.error(`❌ MikroTik job ${job?.id} failed:`, err.message);
+  log.error({ jobId: job?.id, err }, "MikroTik job failed");
 });
 
 notificationWorker.on("failed", (job, err) => {
-  console.error(`❌ Notification job ${job?.id} failed:`, err.message);
+  log.error({ jobId: job?.id, err }, "Notification job failed");
 });
 
 // Handle graceful shutdown (SIGINT for local, SIGTERM for Docker)
 async function shutdown() {
-  console.log("\nClosing workers...");
+  log.info("Shutting down workers");
   await mikrotikWorker.close();
   await notificationWorker.close();
   process.exit(0);

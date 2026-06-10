@@ -15,7 +15,8 @@ module.exports = {
     },
     {
       name: "si-ybynet-worker",
-      script: "dist/workers/index.js",
+      script: "node_modules/tsx/dist/cli.mjs",
+      args: "src/workers/index.ts",
       cwd: "/var/www/si-ybynet",
       instances: 1,
       autorestart: true,
