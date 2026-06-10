@@ -1,0 +1,535 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SI YBY NET API",
+    "description": "Sistem Informasi RT/RW Net — API untuk manajemen pelanggan, pembayaran, bandwidth, tiket, dan laporan.",
+    "version": "0.1.0",
+    "contact": { "name": "YBY NET" }
+  },
+  "servers": [
+    { "url": "/", "description": "Current host" }
+  ],
+  "tags": [
+    { "name": "Health", "description": "System health & monitoring" },
+    { "name": "Dashboard", "description": "Dashboard statistics" },
+    { "name": "Customers", "description": "Customer management" },
+    { "name": "Packages", "description": "Internet package management" },
+    { "name": "Payments", "description": "Billing & payment management" },
+    { "name": "Tickets", "description": "Service request & trouble tickets" },
+    { "name": "Bandwidth", "description": "MikroTik bandwidth monitoring" },
+    { "name": "Users", "description": "User management (admin only)" },
+    { "name": "Settings", "description": "System settings (admin only)" },
+    { "name": "Reports", "description": "Financial reports" },
+    { "name": "Jobs", "description": "Async job status" }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Returns system health status. Add ?detail=true for extended diagnostics (auth required).",
+        "parameters": [
+          { "name": "detail", "in": "query", "schema": { "type": "boolean" }, "description": "Include extended system metrics" }
+        ],
+        "responses": {
+          "200": { "description": "Healthy", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HealthResponse" } } } },
+          "503": { "description": "Unhealthy" }
+        }
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Dashboard statistics",
+        "security": [{ "session": [] }],
+        "responses": {
+          "200": { "description": "Dashboard data with stats and revenue chart" }
+        }
+      }
+    },
+    "/api/customers": {
+      "get": {
+        "tags": ["Customers"],
+        "summary": "List all customers",
+        "security": [{ "session": [] }],
+        "responses": {
+          "200": { "description": "Customer list with package info", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CustomerListResponse" } } } }
+        }
+      },
+      "post": {
+        "tags": ["Customers"],
+        "summary": "Create customer",
+        "description": "Creates a new customer and optionally provisions PPPoE on MikroTik.",
+        "security": [{ "session": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCustomer" } } } },
+        "responses": {
+          "201": { "description": "Customer created" },
+          "400": { "description": "Validation error" }
+        }
+      }
+    },
+    "/api/customers/{id}": {
+      "get": {
+        "tags": ["Customers"],
+        "summary": "Get customer detail",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Customer with payments and activity logs" },
+          "404": { "description": "Not found" }
+        }
+      },
+      "patch": {
+        "tags": ["Customers"],
+        "summary": "Update customer",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCustomer" } } } },
+        "responses": { "200": { "description": "Updated customer" } }
+      },
+      "delete": {
+        "tags": ["Customers"],
+        "summary": "Delete customer (admin only)",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/api/customers/bulk": {
+      "post": {
+        "tags": ["Customers"],
+        "summary": "Bulk suspend/activate customers",
+        "security": [{ "session": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BulkCustomerAction" } } } },
+        "responses": { "200": { "description": "Processed with job IDs" } }
+      }
+    },
+    "/api/customers/export": {
+      "get": {
+        "tags": ["Customers"],
+        "summary": "Export customers to CSV",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "inactive", "suspended", "terminated"] } }],
+        "responses": { "200": { "description": "CSV file download", "content": { "text/csv": {} } } }
+      }
+    },
+    "/api/customers/{id}/retry-provisioning": {
+      "post": {
+        "tags": ["Customers"],
+        "summary": "Retry MikroTik PPPoE provisioning",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Re-queued" } }
+      }
+    },
+    "/api/packages": {
+      "get": {
+        "tags": ["Packages"],
+        "summary": "List all packages",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "Package list" } }
+      },
+      "post": {
+        "tags": ["Packages"],
+        "summary": "Create package (admin only)",
+        "security": [{ "session": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreatePackage" } } } },
+        "responses": { "201": { "description": "Package created" } }
+      }
+    },
+    "/api/packages/{id}": {
+      "get": {
+        "tags": ["Packages"],
+        "summary": "Get package detail",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Package detail" } }
+      },
+      "patch": {
+        "tags": ["Packages"],
+        "summary": "Update package (admin only)",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Updated" } }
+      },
+      "delete": {
+        "tags": ["Packages"],
+        "summary": "Delete package (admin only)",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/api/payments": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "List payments",
+        "security": [{ "session": [] }],
+        "parameters": [
+          { "name": "periodMonth", "in": "query", "schema": { "type": "string" }, "description": "YYYY-MM" },
+          { "name": "customerId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["paid", "pending", "overdue", "cancelled"] } },
+          { "name": "paymentMethod", "in": "query", "schema": { "type": "string", "enum": ["cash", "transfer", "qris"] } },
+          { "name": "dateFrom", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "dateTo", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": { "200": { "description": "Payment list with customer and receiver info" } }
+      },
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Record payment",
+        "security": [{ "session": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreatePayment" } } } },
+        "responses": { "201": { "description": "Payment recorded" } }
+      }
+    },
+    "/api/payments/{id}": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "Get payment detail",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Payment detail" } }
+      },
+      "patch": {
+        "tags": ["Payments"],
+        "summary": "Update payment",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Updated" } }
+      },
+      "delete": {
+        "tags": ["Payments"],
+        "summary": "Delete payment (admin only)",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/api/payments/{id}/receipt": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "Download receipt PDF",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "PDF file", "content": { "application/pdf": {} } } }
+      }
+    },
+    "/api/payments/export": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "Export payments to CSV",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "CSV file download", "content": { "text/csv": {} } } }
+      }
+    },
+    "/api/payments/bulk-generate": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Bulk generate invoices for a billing period",
+        "security": [{ "session": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BulkGenerateInvoices" } } } },
+        "responses": { "200": { "description": "Created/skipped counts" } }
+      }
+    },
+    "/api/payments/mark-overdue": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Mark overdue payments",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "Updated count" } }
+      }
+    },
+    "/api/ticket": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "List tickets",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "Ticket list" } }
+      },
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Create ticket",
+        "security": [{ "session": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateTicket" } } } },
+        "responses": { "201": { "description": "Ticket created" } }
+      }
+    },
+    "/api/ticket/{id}": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "Get ticket detail",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Ticket with customer, handler, and timeline" } }
+      },
+      "patch": {
+        "tags": ["Tickets"],
+        "summary": "Update ticket",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateTicket" } } } },
+        "responses": { "200": { "description": "Updated" } }
+      },
+      "delete": {
+        "tags": ["Tickets"],
+        "summary": "Delete ticket (admin only)",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/api/ticket/{id}/command": {
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Execute ticket command",
+        "description": "Commands: eskalasi, tutup, tunda, lanjut, gangguan-massal",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TicketCommand" } } } },
+        "responses": { "200": { "description": "Command executed" } }
+      }
+    },
+    "/api/ticket/export": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "Export tickets to CSV",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "CSV file download", "content": { "text/csv": {} } } }
+      }
+    },
+    "/api/bandwidth": {
+      "get": {
+        "tags": ["Bandwidth"],
+        "summary": "Current bandwidth status (PPPoE connections)",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "Connection list with throughput summary" } }
+      }
+    },
+    "/api/bandwidth/traffic": {
+      "get": {
+        "tags": ["Bandwidth"],
+        "summary": "Traffic history (5s cache)",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "Current throughput and history array" } }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "List users (admin only)",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "User list without password hashes" } }
+      },
+      "post": {
+        "tags": ["Users"],
+        "summary": "Create user (admin only)",
+        "security": [{ "session": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateUser" } } } },
+        "responses": { "201": { "description": "User created" } }
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user detail",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "User detail" } }
+      },
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Update user (admin only)",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Updated" } }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Delete user (admin only)",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "tags": ["Settings"],
+        "summary": "Get all settings (admin only)",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "System settings" } }
+      },
+      "put": {
+        "tags": ["Settings"],
+        "summary": "Update MikroTik/Fonnte settings (admin only)",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "Updated" } }
+      },
+      "patch": {
+        "tags": ["Settings"],
+        "summary": "Update billing settings (admin only)",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "Updated" } }
+      }
+    },
+    "/api/settings/test-mikrotik": {
+      "post": {
+        "tags": ["Settings"],
+        "summary": "Test MikroTik connection (admin only)",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "Connection info (identity, CPU, uptime)" } }
+      }
+    },
+    "/api/reports/receivables": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Receivables report with aging analysis",
+        "security": [{ "session": [] }],
+        "responses": { "200": { "description": "Customer receivables with aging summary" } }
+      }
+    },
+    "/api/jobs/{id}": {
+      "get": {
+        "tags": ["Jobs"],
+        "summary": "Get async job status",
+        "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Job state, progress, result/error" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "authjs.session-token",
+        "description": "NextAuth.js session cookie"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["healthy", "unhealthy"] },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "uptime": { "type": "number", "description": "Process uptime in seconds (detail mode)" },
+          "memory": { "type": "object", "description": "Memory usage (detail mode)" },
+          "services": { "type": "object", "description": "Service connectivity (detail mode)" }
+        }
+      },
+      "CreateCustomer": {
+        "type": "object",
+        "required": ["name", "address", "phone", "packageId"],
+        "properties": {
+          "name": { "type": "string", "minLength": 2 },
+          "address": { "type": "string", "minLength": 5 },
+          "phone": { "type": "string", "pattern": "^08\\d{8,13}$" },
+          "email": { "type": "string", "format": "email" },
+          "nik": { "type": "string", "pattern": "^\\d{16}$" },
+          "packageId": { "type": "integer", "minimum": 1 },
+          "pppoeUsername": { "type": "string" },
+          "onuSn": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      },
+      "UpdateCustomer": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "address": { "type": "string" },
+          "phone": { "type": "string" },
+          "email": { "type": "string" },
+          "packageId": { "type": "integer" },
+          "status": { "type": "string", "enum": ["active", "inactive", "suspended", "terminated"] },
+          "notes": { "type": "string" }
+        }
+      },
+      "BulkCustomerAction": {
+        "type": "object",
+        "required": ["action", "customerIds"],
+        "properties": {
+          "action": { "type": "string", "enum": ["suspend", "activate"] },
+          "customerIds": { "type": "array", "items": { "type": "integer" }, "minItems": 1, "maxItems": 50 }
+        }
+      },
+      "CreatePackage": {
+        "type": "object",
+        "required": ["name", "speed", "price"],
+        "properties": {
+          "name": { "type": "string", "minLength": 2 },
+          "speed": { "type": "number", "exclusiveMinimum": 0 },
+          "price": { "type": "number", "minimum": 0 },
+          "queueTarget": { "type": "string", "description": "MikroTik queue format e.g. 20M/20M" },
+          "isActive": { "type": "boolean", "default": true }
+        }
+      },
+      "CreatePayment": {
+        "type": "object",
+        "required": ["customerId", "amount", "paymentDate", "paymentMethod", "periodMonth"],
+        "properties": {
+          "customerId": { "type": "integer", "minimum": 1 },
+          "amount": { "type": "number", "exclusiveMinimum": 0 },
+          "paymentDate": { "type": "string", "format": "date" },
+          "paymentMethod": { "type": "string", "enum": ["cash", "transfer", "qris"] },
+          "periodMonth": { "type": "string", "pattern": "^\\d{4}-\\d{2}$" },
+          "notes": { "type": "string" }
+        }
+      },
+      "BulkGenerateInvoices": {
+        "type": "object",
+        "required": ["periodMonth"],
+        "properties": {
+          "periodMonth": { "type": "string", "pattern": "^\\d{4}-\\d{2}$" },
+          "sendReminders": { "type": "boolean", "default": false }
+        }
+      },
+      "CreateTicket": {
+        "type": "object",
+        "required": ["subject", "type", "name", "phone", "description"],
+        "properties": {
+          "subject": { "type": "string", "minLength": 5, "maxLength": 255 },
+          "type": { "type": "string", "enum": ["new_installation", "upgrade_downgrade", "trouble_ticket", "relocation", "unsubscribe"] },
+          "customerId": { "type": "integer" },
+          "name": { "type": "string", "minLength": 2 },
+          "phone": { "type": "string", "pattern": "^08\\d{8,}$" },
+          "description": { "type": "string", "minLength": 10 },
+          "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"], "default": "medium" }
+        }
+      },
+      "UpdateTicket": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["open", "in_progress", "pending", "approved", "rejected", "resolved", "closed"] },
+          "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+          "adminNotes": { "type": "string" }
+        }
+      },
+      "TicketCommand": {
+        "type": "object",
+        "required": ["command"],
+        "properties": {
+          "command": { "type": "string", "enum": ["eskalasi", "tutup", "tunda", "lanjut", "gangguan-massal"] },
+          "argument": { "type": "string" }
+        }
+      },
+      "CreateUser": {
+        "type": "object",
+        "required": ["name", "email", "password", "role"],
+        "properties": {
+          "name": { "type": "string", "minLength": 2 },
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 8 },
+          "role": { "type": "string", "enum": ["admin", "operator", "technician"] }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "details": { "type": "object" }
+        }
+      }
+    }
+  }
+}
