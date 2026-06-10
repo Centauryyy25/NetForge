@@ -1,0 +1,86 @@
+erDiagram
+    USERS ||--o{ PAYMENTS : "received_by"
+    USERS ||--o{ SERVICE_REQUESTS : "handled_by"
+    PACKAGES ||--o{ CUSTOMERS : "package_id"
+    CUSTOMERS ||--o{ PAYMENTS : "customer_id"
+    CUSTOMERS ||--o{ SERVICE_REQUESTS : "customer_id"
+    CUSTOMERS ||--o{ ACTIVITY_LOGS : "customer_id"
+
+    USERS {
+        serial id PK
+        varchar name
+        varchar email UK
+        varchar password
+        user_role role
+        timestamp created_at
+    }
+    PACKAGES {
+        serial id PK
+        varchar name
+        integer speed
+        numeric price
+        varchar queue_target
+        boolean is_active
+        timestamp created_at
+    }
+    CUSTOMERS {
+        serial id PK
+        varchar customer_id UK
+        varchar name
+        text address
+        varchar phone
+        varchar email
+        varchar nik
+        integer package_id FK
+        date registration_date
+        date active_until
+        customer_status status
+        varchar pppoe_username
+        varchar onu_sn
+        text notes
+        timestamp created_at
+        timestamp updated_at
+    }
+    PAYMENTS {
+        serial id PK
+        varchar invoice_number UK
+        integer customer_id FK
+        numeric amount
+        date payment_date
+        varchar payment_method
+        varchar period_month
+        payment_status status
+        text notes
+        integer received_by FK
+        timestamp created_at
+    }
+    SERVICE_REQUESTS {
+        serial id PK
+        varchar ticket_number UK
+        request_type type
+        integer customer_id FK
+        varchar name
+        varchar phone
+        text description
+        request_status status
+        text admin_notes
+        integer handled_by FK
+        timestamp resolved_at
+        timestamp created_at
+        timestamp updated_at
+    }
+    ACTIVITY_LOGS {
+        serial id PK
+        integer customer_id FK
+        varchar action
+        integer duration
+        numeric bytes_in
+        numeric bytes_out
+        timestamp timestamp
+    }
+    SETTINGS {
+        serial id PK
+        varchar key UK
+        varchar value
+        timestamp updated_at
+    }

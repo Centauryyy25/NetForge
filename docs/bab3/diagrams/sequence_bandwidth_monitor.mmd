@@ -1,0 +1,30 @@
+sequenceDiagram
+    actor T as Teknisi
+    participant B as Browser
+    participant API as GET /api/bandwidth
+    participant P as MikroTik Pool
+    participant Cache as Cache (TTL 10s)
+    participant MT as MikroTik RouterOS
+    participant DB as PostgreSQL
+
+    T->>B: Buka /bandwidth
+    B->>API: GET /api/bandwidth
+    API->>P: mikrotikQuery("/ppp/active/print")
+    P->>Cache: lookup("/ppp/active/print")
+    alt cache hit
+        Cache-->>P: cached array
+    else cache miss
+        P->>MT: connect (singleton)
+        P->>MT: /ppp/active/print
+        MT-->>P: [ {name, address, uptime, ...} ]
+        P->>Cache: set TTL=10s
+    end
+    P-->>API: active sessions
+    API->>P: mikrotikQuery("/queue/simple/print")
+    P-->>API: queues[]
+    API->>DB: SELECT customers JOIN packages
+    DB-->>API: customers[]
+    API->>API: merge(active, queues, customers)
+    API-->>B: { connections, online, offline, throughput }
+    B-->>T: Render tabel + grafik realtime
+    Note over B,API: Frontend polling tiap 30 detik

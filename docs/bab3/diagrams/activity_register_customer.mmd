@@ -1,0 +1,26 @@
+flowchart TD
+    Start([Mulai]) --> A1["Operator membuka halaman /customers/new"]
+    A1 --> A2["Mengisi form: nama, alamat, telepon, paket, PPPoE username, ONU SN"]
+    A2 --> A3["Submit form"]
+    A3 --> A4{"Validasi Zod<br/>(createCustomerSchema)"}
+    A4 -- "Tidak valid" --> A5["Tampilkan pesan error per field"]
+    A5 --> A2
+    A4 -- "Valid" --> A6["POST /api/customers"]
+    A6 --> A7["Cek RBAC: admin/operator"]
+    A7 --> A8["Generate customerId<br/>(YBY-YYMM-NNNN)"]
+    A8 --> A9["INSERT INTO customers<br/>status=active, activeUntil=+1 bulan"]
+    A9 --> A10{"PPPoE username<br/>diisi?"}
+    A10 -- "Tidak" --> A12["Response 201 Created"]
+    A10 -- "Ya" --> A11["enqueueCreatePPPoE() ke<br/>BullMQ queue mikrotik-queue"]
+    A11 --> A12
+    A12 --> A13["UI menampilkan toast sukses<br/>+ redirect ke /customers"]
+
+    A11 -. async .-> W1[/"MikroTik Worker<br/>(proses CREATE_PPPOE)"/]
+    W1 --> W2["RouterOS API:<br/>/ppp/secret/add"]
+    W2 --> W3{"Berhasil?"}
+    W3 -- "Ya" --> W4["Job complete"]
+    W3 -- "Tidak" --> W5["Retry (max 3x, backoff 2s)"]
+    W5 --> W6{"Masih gagal?"}
+    W6 -- "Ya" --> W7["Job failed (logged)"]
+
+    A13 --> End([Selesai])

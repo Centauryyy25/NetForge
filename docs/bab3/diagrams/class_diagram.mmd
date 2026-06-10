@@ -1,0 +1,119 @@
+classDiagram
+    class User {
+        +int id
+        +string name
+        +string email
+        +string password
+        +Role role
+        +DateTime createdAt
+        +authenticate(email, password) Session
+    }
+
+    class Package {
+        +int id
+        +string name
+        +int speed
+        +decimal price
+        +string queueTarget
+        +bool isActive
+        +DateTime createdAt
+    }
+
+    class Customer {
+        +int id
+        +string customerId
+        +string name
+        +string address
+        +string phone
+        +string email
+        +string nik
+        +int packageId
+        +Date registrationDate
+        +Date activeUntil
+        +CustomerStatus status
+        +string pppoeUsername
+        +string onuSn
+        +string notes
+        +suspend() void
+        +activate() void
+        +renew(months) void
+    }
+
+    class Payment {
+        +int id
+        +string invoiceNumber
+        +int customerId
+        +decimal amount
+        +Date paymentDate
+        +string paymentMethod
+        +string periodMonth
+        +PaymentStatus status
+        +int receivedBy
+        +generateReceipt() PDF
+    }
+
+    class ServiceRequest {
+        +int id
+        +string ticketNumber
+        +RequestType type
+        +int customerId
+        +string name
+        +string phone
+        +string description
+        +RequestStatus status
+        +int handledBy
+        +DateTime resolvedAt
+        +assign(userId) void
+        +resolve(notes) void
+    }
+
+    class ActivityLog {
+        +int id
+        +int customerId
+        +string action
+        +int duration
+        +bigint bytesIn
+        +bigint bytesOut
+        +DateTime timestamp
+    }
+
+    class Setting {
+        +int id
+        +string key
+        +string value
+    }
+
+    class MikrotikClient {
+        -RouterOSAPI conn
+        +createPPPoEUser(name, pwd, profile)
+        +suspendPPPoEUser(name)
+        +activatePPPoEUser(name)
+        +deletePPPoEUser(name)
+        +setSimpleQueue(name, target, limit)
+        +deleteSimpleQueue(name)
+        +getActiveConnections()
+    }
+
+    class BullQueueProducer {
+        +enqueueCreatePPPoE(data)
+        +enqueueSuspendPPPoE(data)
+        +enqueueActivatePPPoE(data)
+        +enqueueSetQueue(data)
+        +enqueueWhatsAppBilling(data)
+    }
+
+    class WhatsAppService {
+        -string token
+        -string apiUrl
+        +sendMessage(phone, text)
+    }
+
+    Package "1" -- "0..*" Customer : memiliki
+    Customer "1" -- "0..*" Payment : melakukan
+    Customer "1" -- "0..*" ServiceRequest : mengajukan
+    Customer "1" -- "0..*" ActivityLog : mencatat
+    User "1" -- "0..*" Payment : menerima
+    User "0..1" -- "0..*" ServiceRequest : menangani
+    Customer ..> MikrotikClient : memicu
+    Payment ..> WhatsAppService : memicu
+    MikrotikClient ..> BullQueueProducer : dipanggil via

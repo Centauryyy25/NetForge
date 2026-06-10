@@ -28,7 +28,7 @@ export async function submitServiceRequest(
   data: FormValues,
   fetchImpl: typeof fetch = fetch
 ): Promise<void> {
-  const res = await fetchImpl("/api/service-requests", {
+  const res = await fetchImpl("/api/ticket", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(data),
@@ -47,6 +47,7 @@ export function ServiceRequestForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      subject: "",
       type: undefined,
       name: "",
       phone: "",
@@ -66,7 +67,7 @@ export function ServiceRequestForm() {
     try {
       await submitServiceRequest(data);
       toast.success("Ajuan berhasil dibuat");
-      router.push("/service-requests");
+      router.push("/ticket");
       router.refresh();
     } catch (e) {
       toast.error(
@@ -81,6 +82,21 @@ export function ServiceRequestForm() {
     <Card>
       <CardContent className="pt-6">
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          <div className="space-y-2">
+            <Label htmlFor="subject">Judul Tiket *</Label>
+            <Input
+              id="subject"
+              placeholder="Contoh: Internet mati total, WiFi lemot sejak pagi"
+              aria-invalid={!!errors.subject}
+              {...register("subject")}
+            />
+            {errors.subject && (
+              <p className="text-sm text-destructive">
+                {errors.subject.message}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="type">Jenis Ajuan *</Label>
             <Select

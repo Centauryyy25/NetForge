@@ -12,12 +12,13 @@ export { serviceRequests } from "./service-requests";
 export { activityLogs } from "./activity-logs";
 export { settings } from "./settings";
 export { counters } from "./counters";
+export { ticketLogs } from "./ticket-logs";
 
 // Enums
 export { userRoleEnum } from "./users";
 export { customerStatusEnum } from "./customers";
 export { paymentStatusEnum } from "./payments";
-export { requestTypeEnum, requestStatusEnum } from "./service-requests";
+export { requestTypeEnum, requestStatusEnum, ticketPriorityEnum } from "./service-requests";
 
 // Relations
 export {
@@ -27,4 +28,5 @@ export {
   paymentsRelations,
   serviceRequestsRelations,
   activityLogsRelations,
+  ticketLogsRelations,
 } from "./relations";

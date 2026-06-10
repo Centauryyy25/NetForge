@@ -1,0 +1,32 @@
+sequenceDiagram
+    actor O as Operator
+    participant B as Browser
+    participant API as POST /api/customers
+    participant V as Zod Validator
+    participant DB as PostgreSQL
+    participant Q as BullMQ (Redis)
+    participant W as MikroTik Worker
+    participant MT as MikroTik RouterOS
+
+    O->>B: Submit form pelanggan
+    B->>API: POST { name, packageId, pppoeUsername, ... }
+    API->>V: createCustomerSchema.parse()
+    V-->>API: data terverifikasi
+    API->>DB: INSERT INTO customers (...)
+    DB-->>API: customer { id, customerId }
+    API->>Q: enqueueCreatePPPoE({ username, password, profile })
+    Q-->>API: jobId
+    API-->>B: 201 Created { customer, jobId }
+    B-->>O: Toast "Pelanggan ditambahkan"
+
+    Q->>W: deliver job CREATE_PPPOE
+    W->>MT: /ppp/secret/add name=... password=... profile=...
+    MT-->>W: ok
+    W->>Q: ack (job complete)
+
+    opt Pemeriksaan status job
+        B->>API: GET /api/jobs/{jobId}
+        API->>Q: getJob(jobId)
+        Q-->>API: { state: completed }
+        API-->>B: { status: "completed" }
+    end

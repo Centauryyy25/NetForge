@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { submitServiceRequest } from "./service-request-form";
 
 const validData = {
+  subject: "Internet mati total",
   type: "trouble_ticket" as const,
   name: "Budi",
   phone: "081234567890",
@@ -18,13 +19,13 @@ function makeFetch(status: number, body: unknown): typeof fetch {
 }
 
 describe("submitServiceRequest", () => {
-  it("POSTs JSON to /api/service-requests on success", async () => {
+  it("POSTs JSON to /api/ticket on success", async () => {
     const fetchMock = makeFetch(201, { data: { id: 1, ticketNumber: "TKT-2026-05-0001" } });
     await submitServiceRequest(validData, fetchMock);
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = (fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(url).toBe("/api/service-requests");
+    expect(url).toBe("/api/ticket");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body)).toMatchObject({
       type: "trouble_ticket",

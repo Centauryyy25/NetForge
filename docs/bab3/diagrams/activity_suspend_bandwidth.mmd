@@ -1,0 +1,19 @@
+flowchart TD
+    Start([Mulai]) --> A1["Admin/Operator membuka<br/>/customers/[id]/edit"]
+    A1 --> A2["Ubah field status:<br/>active → suspended"]
+    A2 --> A3["Klik Simpan"]
+    A3 --> A4["PATCH /api/customers/[id]"]
+    A4 --> A5["Validasi updateCustomerSchema"]
+    A5 --> A6["UPDATE customers SET status='suspended'"]
+    A6 --> A7{"PPPoE username<br/>tersedia?"}
+    A7 -- "Tidak" --> A12["Response 200 OK"]
+    A7 -- "Ya" --> A8["enqueueSuspendPPPoE()"]
+    A8 --> A12
+    A12 --> A13["UI: status berubah, badge merah"]
+
+    A8 -. async .-> W1[/"MikroTik Worker"/]
+    W1 --> W2["/ppp/secret/set disabled=yes"]
+    W2 --> W3["/ppp/active/remove<br/>(force disconnect)"]
+    W3 --> W4["Cache invalidate"]
+
+    A13 --> End([Selesai])

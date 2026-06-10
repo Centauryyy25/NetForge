@@ -1,0 +1,54 @@
+flowchart LR
+    classDef actor fill:#fff,stroke:#000,stroke-width:2px,color:#000
+    classDef uc fill:#e8f4fd,stroke:#1f6feb,stroke-width:1px,color:#000
+    classDef sys fill:#f6f8fa,stroke:#888,stroke-width:1px,color:#000
+
+    Admin(("Administrator")):::actor
+    Operator(("Operator")):::actor
+    Teknisi(("Teknisi")):::actor
+    Pelanggan(("Pelanggan / Calon Pelanggan")):::actor
+
+    subgraph SI_YBY_NET["Sistem Informasi YBY NET"]
+        UC1["Login"]:::uc
+        UC2["Kelola Pelanggan"]:::uc
+        UC3["Kelola Paket"]:::uc
+        UC4["Catat Pembayaran"]:::uc
+        UC5["Kelola Tiket Layanan"]:::uc
+        UC6["Monitor Bandwidth"]:::uc
+        UC7["Lihat Activity Log"]:::uc
+        UC8["Kelola Pengguna"]:::uc
+        UC9["Konfigurasi Sistem"]:::uc
+        UC10["Lihat Laporan Keuangan"]:::uc
+        UC11["Submit Pengajuan Layanan"]:::uc
+        UC12["Sinkronisasi MikroTik"]:::uc
+        UC13["Kirim Notifikasi WhatsApp"]:::uc
+    end
+
+    Admin --> UC1
+    Admin --> UC2
+    Admin --> UC3
+    Admin --> UC4
+    Admin --> UC5
+    Admin --> UC6
+    Admin --> UC7
+    Admin --> UC8
+    Admin --> UC9
+    Admin --> UC10
+
+    Operator --> UC1
+    Operator --> UC2
+    Operator --> UC3
+    Operator --> UC4
+    Operator --> UC5
+    Operator --> UC6
+    Operator --> UC7
+
+    Teknisi --> UC1
+    Teknisi --> UC5
+    Teknisi --> UC6
+
+    Pelanggan --> UC11
+
+    UC2 -. include .-> UC12
+    UC4 -. include .-> UC13
+    UC5 -. extend .-> UC12

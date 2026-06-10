@@ -1,0 +1,24 @@
+sequenceDiagram
+    actor A as Admin
+    participant B as Browser
+    participant API as PATCH /api/customers/[id]
+    participant DB as PostgreSQL
+    participant Q as BullMQ
+    participant W as MikroTik Worker
+    participant MT as MikroTik RouterOS
+
+    A->>B: Ubah status pelanggan ke "suspended"
+    B->>API: PATCH { status: "suspended" }
+    API->>DB: SELECT customer WHERE id=?
+    DB-->>API: { pppoeUsername, status: "active" }
+    API->>DB: UPDATE customers SET status='suspended'
+    DB-->>API: ok
+    API->>Q: enqueueSuspendPPPoE({ username })
+    API-->>B: 200 { customer, jobId }
+
+    Q->>W: deliver SUSPEND_PPPOE
+    W->>MT: /ppp/secret/set disabled=yes [find name=...]
+    MT-->>W: ok
+    W->>MT: /ppp/active/remove [find name=...]
+    MT-->>W: ok (sesi terputus)
+    W->>Q: ack

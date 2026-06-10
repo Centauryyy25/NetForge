@@ -4,6 +4,9 @@ import { serviceRequests } from "@/db/schema/service-requests";
 import { createServiceRequestSchema } from "@/validators/service-request";
 import { auth } from "@/lib/auth";
 import { nextTicketNumber } from "@/lib/ids";
+import { calculateSlaDeadline } from "@/lib/sla";
+import { logTicketAction } from "@/lib/ticket-log";
+import type { TicketPriority } from "@/lib/constants";
 
 export async function GET() {
   try {
@@ -46,19 +49,33 @@ export async function POST(req: Request) {
 
     const data = result.data;
     const ticketNumber = await nextTicketNumber();
+    const priority = (data.priority ?? "medium") as TicketPriority;
+    const now = new Date();
+    const slaDeadline = calculateSlaDeadline(now, priority);
 
     const newRequest = await db
       .insert(serviceRequests)
       .values({
         ticketNumber,
+        subject: data.subject,
         type: data.type,
         customerId: data.customerId ?? null,
         name: data.name,
         phone: data.phone,
         description: data.description,
         status: "open",
+        priority,
+        slaDeadline,
       })
       .returning();
+
+    await logTicketAction({
+      ticketId: newRequest[0].id,
+      userId: parseInt(session.user.id),
+      action: "created",
+      detail: `Tiket dibuat: ${data.subject}`,
+      newValue: "open",
+    });
 
     return NextResponse.json({ data: newRequest[0] }, { status: 201 });
   } catch (error) {

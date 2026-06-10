@@ -3,12 +3,14 @@ import {
   CUSTOMER_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
   REQUEST_STATUS_LABELS,
+  TICKET_PRIORITY_LABELS,
   type CustomerStatus,
   type PaymentStatus,
   type RequestStatus,
+  type TicketPriority,
 } from "@/lib/constants";
 
-type StatusType = "customer" | "payment" | "request";
+type StatusType = "customer" | "payment" | "request" | "priority";
 
 const CUSTOMER_VARIANT: Record<CustomerStatus, string> = {
   active: "bg-success/85 text-success-foreground",
@@ -25,9 +27,17 @@ const PAYMENT_VARIANT: Record<PaymentStatus, string> = {
   cancelled: "bg-muted/70 text-muted-foreground",
 };
 
+const PRIORITY_VARIANT: Record<TicketPriority, string> = {
+  low: "bg-muted/70 text-muted-foreground",
+  medium: "bg-primary/85 text-primary-foreground",
+  high: "bg-warning/85 text-warning-foreground",
+  critical: "bg-destructive/85 text-destructive-foreground",
+};
+
 const REQUEST_VARIANT: Record<RequestStatus, string> = {
   open: "bg-primary/85 text-primary-foreground",
   in_progress: "bg-warning/85 text-warning-foreground",
+  pending: "bg-orange-500/85 text-white",
   approved: "bg-success/85 text-success-foreground",
   rejected: "bg-destructive/85 text-destructive-foreground",
   resolved: "bg-success/85 text-success-foreground",
@@ -55,6 +65,10 @@ export function StatusBadge({ status, type }: StatusBadgeProps) {
     case "request":
       label = REQUEST_STATUS_LABELS[status as RequestStatus] ?? status;
       className = REQUEST_VARIANT[status as RequestStatus] ?? "";
+      break;
+    case "priority":
+      label = TICKET_PRIORITY_LABELS[status as TicketPriority] ?? status;
+      className = PRIORITY_VARIANT[status as TicketPriority] ?? "";
       break;
   }
 

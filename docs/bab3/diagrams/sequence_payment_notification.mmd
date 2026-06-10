@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor O as Operator
+    participant B as Browser
+    participant API as POST /api/payments
+    participant V as Zod Validator
+    participant DB as PostgreSQL
+    participant Q as BullMQ (Redis)
+    participant W as Notification Worker
+    participant F as Fonnte API
+
+    O->>B: Submit form pembayaran
+    B->>API: POST { customerId, amount, periodMonth, method }
+    API->>V: createPaymentSchema.parse()
+    V-->>API: ok
+    API->>DB: SELECT customer WHERE id=?
+    DB-->>API: customer
+    API->>API: generateInvoiceNumber()
+    API->>DB: INSERT INTO payments (status='paid')
+    DB-->>API: payment
+    API->>Q: enqueueWhatsAppBilling({ phone, name, invoice, amount, periodMonth })
+    API-->>B: 201 { payment }
+    B-->>O: Tampilkan kuitansi digital
+
+    Q->>W: deliver job WHATSAPP_BILLING
+    W->>W: composeMessage() (B.Indonesia)
+    W->>F: POST /send Authorization: Bearer FONNTE_TOKEN<br/>{ target: phone, message: text }
+    F-->>W: 200 { detail: "ok" }
+    W->>Q: ack

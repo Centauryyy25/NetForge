@@ -1,0 +1,27 @@
+flowchart TD
+    Start([Mulai]) --> A1["Pelanggan / calon pelanggan<br/>membuka halaman pengajuan"]
+    A1 --> A2["Pilih jenis: pemasangan baru,<br/>upgrade, gangguan, pindah, berhenti"]
+    A2 --> A3["Isi nama, telepon, deskripsi"]
+    A3 --> A4["Submit (POST /api/service-requests)"]
+    A4 --> A5["Validasi createServiceRequestSchema"]
+    A5 --> A6["Generate ticketNumber<br/>(TKT-YYMM-NNNN)"]
+    A6 --> A7["INSERT service_requests<br/>status=open"]
+    A7 --> A8["Notifikasi tampil ke admin/operator"]
+
+    A8 --> B1["Operator membuka /service-requests"]
+    B1 --> B2["Pilih tiket, klik Detail"]
+    B2 --> B3{"Jenis tiket?"}
+    B3 -- "Pemasangan/Upgrade" --> B4["Assign teknisi,<br/>status=in_progress"]
+    B3 -- "Gangguan" --> B5["Diagnosa, set status=in_progress"]
+    B3 -- "Berhenti" --> B6["Approve → enqueueDeletePPPoE,<br/>status=approved"]
+
+    B4 --> C1["Teknisi datang ke lokasi"]
+    C1 --> C2["Update status=resolved<br/>+ adminNotes"]
+    B5 --> C3{"Solusi ditemukan?"}
+    C3 -- "Ya" --> C2
+    C3 -- "Tidak" --> C4["Eskalasi ke admin"]
+    B6 --> C5["status=closed"]
+
+    C2 --> D1["UPDATE service_requests<br/>resolvedAt=NOW()"]
+    C5 --> D1
+    D1 --> End([Selesai])

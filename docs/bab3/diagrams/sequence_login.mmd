@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor U as User
+    participant B as Browser
+    participant N as Next.js (RSC)
+    participant M as Middleware
+    participant A as NextAuth /api/auth
+    participant DB as PostgreSQL
+
+    U->>B: Buka /login
+    B->>N: GET /login
+    N-->>B: Render LoginForm
+    U->>B: Isi email + password, submit
+    B->>A: POST /api/auth/callback/credentials
+    A->>DB: SELECT * FROM users WHERE email=?
+    DB-->>A: row(user)
+    A->>A: bcrypt.compare(password, user.password)
+    alt password valid
+        A->>A: Sign JWT { sub, role, email }
+        A-->>B: Set-Cookie: next-auth.session-token
+        B->>N: GET /
+        N->>M: middleware(req)
+        M->>M: cek session + role
+        M-->>N: NextResponse.next()
+        N-->>B: Render Dashboard
+    else password invalid
+        A-->>B: 401 Unauthorized
+        B-->>U: Tampilkan toast error
+    end

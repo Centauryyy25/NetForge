@@ -44,6 +44,7 @@ export type RequestType =
 export const REQUEST_STATUSES = {
   OPEN: "open",
   IN_PROGRESS: "in_progress",
+  PENDING: "pending",
   APPROVED: "approved",
   REJECTED: "rejected",
   RESOLVED: "resolved",
@@ -52,6 +53,31 @@ export const REQUEST_STATUSES = {
 
 export type RequestStatus =
   (typeof REQUEST_STATUSES)[keyof typeof REQUEST_STATUSES];
+
+export const TICKET_PRIORITIES = {
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+  CRITICAL: "critical",
+} as const;
+
+export type TicketPriority =
+  (typeof TICKET_PRIORITIES)[keyof typeof TICKET_PRIORITIES];
+
+export const TICKET_PRIORITY_LABELS: Record<TicketPriority, string> = {
+  low: "Rendah",
+  medium: "Sedang",
+  high: "Tinggi",
+  critical: "Kritis",
+};
+
+// SLA deadlines in hours, keyed by priority
+export const SLA_HOURS: Record<TicketPriority, number> = {
+  low: 72,
+  medium: 24,
+  high: 8,
+  critical: 4,
+};
 
 export const PAYMENT_METHODS = [
   "cash",
@@ -87,11 +113,20 @@ export const REQUEST_TYPE_LABELS: Record<RequestType, string> = {
 export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
   open: "Dibuka",
   in_progress: "Diproses",
+  pending: "Ditunda",
   approved: "Disetujui",
   rejected: "Ditolak",
   resolved: "Selesai",
   closed: "Ditutup",
 };
+
+export const SLA_STATUS_LABELS = {
+  on_track: "Tepat Waktu",
+  breached: "Terlewati",
+  paused: "Dijeda",
+} as const;
+
+export type SlaStatusKey = keyof typeof SLA_STATUS_LABELS;
 
 export const ROLE_LABELS: Record<Role, string> = {
   admin: "Administrator",

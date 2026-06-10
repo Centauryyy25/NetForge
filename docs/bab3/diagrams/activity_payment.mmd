@@ -1,0 +1,23 @@
+flowchart TD
+    Start([Mulai]) --> A1["Operator membuka /payments/new"]
+    A1 --> A2["Pilih pelanggan, isi nominal,<br/>tanggal, metode, periode bulan"]
+    A2 --> A3["Submit"]
+    A3 --> A4{"Validasi<br/>createPaymentSchema"}
+    A4 -- "Tidak valid" --> A5["Tampilkan error"]
+    A5 --> A2
+    A4 -- "Valid" --> A6["POST /api/payments"]
+    A6 --> A7["Cek customer eksis"]
+    A7 --> A8["Generate invoiceNumber<br/>(INV-YYMM-NNNNN)"]
+    A8 --> A9["INSERT INTO payments<br/>status=paid"]
+    A9 --> A10["enqueueWhatsAppBilling()<br/>ke notification-queue"]
+    A10 --> A11["Response 201"]
+    A11 --> A12["UI: tampilkan kuitansi digital,<br/>opsi cetak/print"]
+
+    A10 -. async .-> N1[/"Notification Worker"/]
+    N1 --> N2["Compose pesan B.Indonesia:<br/>Halo {nama}, terima kasih..."]
+    N2 --> N3["POST ke Fonnte API<br/>(target=phone, message=text)"]
+    N3 --> N4{"Sukses?"}
+    N4 -- "Ya" --> N5["Job complete"]
+    N4 -- "Tidak" --> N6["Retry (3x)"]
+
+    A12 --> End([Selesai])
