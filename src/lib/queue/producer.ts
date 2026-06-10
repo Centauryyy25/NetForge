@@ -1,5 +1,5 @@
 import { Queue, type JobsOptions } from "bullmq";
-import { redisConnection } from "./connection";
+import { getRedisConnection } from "./connection";
 import {
   MIKROTIK_QUEUE,
   NOTIFICATION_QUEUE,
@@ -15,23 +15,48 @@ import {
   type MarkOverdueJob,
 } from "./jobs";
 
+// Lazy queue singletons — avoids connecting to Redis during `next build`.
 const globalForQueues = globalThis as unknown as {
   mikrotikQueue?: Queue;
   notificationQueue?: Queue;
 };
 
-export const mikrotikQueue =
-  globalForQueues.mikrotikQueue ??
-  new Queue(MIKROTIK_QUEUE, { connection: redisConnection });
-
-export const notificationQueue =
-  globalForQueues.notificationQueue ??
-  new Queue(NOTIFICATION_QUEUE, { connection: redisConnection });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForQueues.mikrotikQueue = mikrotikQueue;
-  globalForQueues.notificationQueue = notificationQueue;
+function getMikrotikQueue(): Queue {
+  if (!globalForQueues.mikrotikQueue) {
+    globalForQueues.mikrotikQueue = new Queue(MIKROTIK_QUEUE, {
+      connection: getRedisConnection(),
+    });
+  }
+  return globalForQueues.mikrotikQueue;
 }
+
+function getNotificationQueue(): Queue {
+  if (!globalForQueues.notificationQueue) {
+    globalForQueues.notificationQueue = new Queue(NOTIFICATION_QUEUE, {
+      connection: getRedisConnection(),
+    });
+  }
+  return globalForQueues.notificationQueue;
+}
+
+export { getMikrotikQueue as mikrotikQueue_getter };
+
+// Re-export as getters for backward compatibility with workers
+export const mikrotikQueue = new Proxy({} as Queue, {
+  get(_t, prop, recv) {
+    const q = getMikrotikQueue();
+    const v = Reflect.get(q, prop, recv);
+    return typeof v === "function" ? v.bind(q) : v;
+  },
+});
+
+export const notificationQueue = new Proxy({} as Queue, {
+  get(_t, prop, recv) {
+    const q = getNotificationQueue();
+    const v = Reflect.get(q, prop, recv);
+    return typeof v === "function" ? v.bind(q) : v;
+  },
+});
 
 /** Standard retry policy: 3 attempts, exponential backoff starting at 2 s. */
 export const DEFAULT_JOB_OPTS: JobsOptions = {
