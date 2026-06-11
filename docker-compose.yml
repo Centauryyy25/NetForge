@@ -24,7 +24,7 @@ services:
     image: redis:7-bookworm
     container_name: siybynet-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction
     volumes:
       - redisdata:/data
     healthcheck:

@@ -9,7 +9,7 @@ WORKDIR /app
 RUN corepack enable pnpm
 
 # Copy dependency manifests
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install all dependencies (including devDependencies for build)
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
@@ -31,7 +31,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build Next.js (standalone output)
+# Cap V8 heap so the build survives on low-RAM hosts (spills to swap instead of OOM-kill)
 ENV NODE_ENV=production
+ENV NODE_OPTIONS=--max-old-space-size=2048
 RUN pnpm build
 
 # ============================================
