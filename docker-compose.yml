@@ -4,12 +4,24 @@ services:
     image: postgres:16-bookworm
     container_name: siybynet-postgres
     restart: unless-stopped
+    # Protect the DB from the host OOM killer: make it a low-priority kill target
+    # and reserve headroom. The box is RAM-starved and a `pnpm build` (2 GB heap)
+    # previously thrashed the host into OOM-reaping a Postgres backend, which
+    # forced a full cluster reinitialize. -800 tells the kernel to kill the build
+    # / other procs first.
+    oom_score_adj: -800
     environment:
       POSTGRES_DB: si_ybynet
       POSTGRES_USER: si_ybynet
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    deploy:
+      resources:
+        reservations:
+          memory: 256M
+        limits:
+          memory: 512M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U si_ybynet -d si_ybynet"]
       interval: 5s
