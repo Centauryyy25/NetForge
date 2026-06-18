@@ -6,7 +6,7 @@ import { createPaymentSchema } from "@/validators/payment";
 import { requireAuth, requireRole } from "@/lib/auth-guard";
 import { withErrorHandler } from "@/lib/api-handler";
 import { nextInvoiceNumber } from "@/lib/ids";
-import { enqueueWhatsAppBilling } from "@/lib/queue/producer";
+import { enqueuePaidNotification } from "@/lib/billing/receipt";
 import { eq, gte, lte, type SQL } from "drizzle-orm";
 
 export const GET = withErrorHandler(async (req) => {
@@ -80,14 +80,9 @@ export const POST = withErrorHandler(async (req) => {
     })
     .returning();
 
-  await enqueueWhatsAppBilling({
-    customerPhone: customer.phone,
-    customerName: customer.name,
-    invoiceNumber,
-    amount: data.amount,
-    periodMonth: data.periodMonth,
-    triggeredBy: parseInt(session.user.id),
-  });
+  // Status di sini selalu "paid" (mencatat pembayaran yang sudah diterima),
+  // jadi kirim konfirmasi lunas + kwitansi — bukan pengingat tagihan.
+  await enqueuePaidNotification(newPayment[0].id, parseInt(session.user.id));
 
   return NextResponse.json({ data: newPayment[0] }, { status: 201 });
 });

@@ -17,6 +17,8 @@ export const JOB_NAMES = {
   // Notification Jobs
   WHATSAPP_BILLING: "whatsapp-billing",
   WHATSAPP_OVERDUE_REMINDER: "whatsapp-overdue-reminder",
+  WHATSAPP_PAYMENT_CONFIRMATION: "whatsapp-payment-confirmation",
+  WHATSAPP_RECEIPT: "whatsapp-receipt",
   MARK_OVERDUE: "mark-overdue",
 } as const;
 
@@ -70,6 +72,23 @@ export interface WhatsAppOverdueReminderJob extends BaseJobData {
   amount: number;
   periodMonth: string;
   dueDay: number;
+}
+
+export interface WhatsAppPaymentConfirmationJob extends BaseJobData {
+  customerPhone: string;
+  customerName: string;
+  invoiceNumber: string;
+  amount: number;
+  periodMonth: string;
+  paymentMethod?: string;
+}
+
+export interface WhatsAppReceiptJob extends BaseJobData {
+  customerPhone: string;
+  caption: string;
+  filename: string;
+  /** Receipt PDF encoded as base64 (passed through Redis). */
+  fileBase64: string;
 }
 
 export type MarkOverdueJob = BaseJobData;
