@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { readApiError } from "@/lib/http/read-api-error";
 
 export function MarkOverdueButton() {
   const router = useRouter();
@@ -22,8 +23,7 @@ export function MarkOverdueButton() {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Gagal menandai tunggakan");
+        throw new Error(await readApiError(res, "Gagal menandai tunggakan"));
       }
 
       const json = await res.json();

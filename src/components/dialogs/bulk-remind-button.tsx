@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageSquare, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { readApiError } from "@/lib/http/read-api-error";
 
 export function BulkRemindButton({ periodMonth }: { periodMonth?: string }) {
   const router = useRouter();
@@ -29,8 +30,7 @@ export function BulkRemindButton({ periodMonth }: { periodMonth?: string }) {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Gagal mengirim pengingat");
+        throw new Error(await readApiError(res, "Gagal mengirim pengingat"));
       }
 
       const json = await res.json();

@@ -1,8 +1,9 @@
 import { Worker } from "bullmq";
 import { redisConnection } from "../lib/queue/connection";
 import { NOTIFICATION_QUEUE, JOB_NAMES } from "../lib/queue/jobs";
-import { sendWhatsApp, sendWhatsAppDocument } from "../lib/whatsapp";
+import { sendWhatsApp } from "../lib/whatsapp";
 import { markOverduePayments } from "../lib/billing/overdue";
+import { deliverPaidNotification } from "../lib/billing/receipt";
 import { getBillingConfig } from "../lib/settings";
 import {
   buildBillingMessage,
@@ -66,15 +67,9 @@ export const notificationWorker = new Worker(
       }
 
       case JOB_NAMES.WHATSAPP_RECEIPT: {
-        const { customerPhone, caption, filename, fileBase64 } = job.data;
-        const file = Buffer.from(fileBase64, "base64");
-
-        const result = await sendWhatsAppDocument(
-          customerPhone,
-          caption,
-          file,
-          filename
-        );
+        // Worker renders the receipt PDF and sends it (text fallback on render
+        // failure). Kept off the web request — see deliverPaidNotification.
+        const result = await deliverPaidNotification(job.data.paymentId);
         return result;
       }
 

@@ -6,7 +6,8 @@ import { generateReceiptPdf, amountToWords } from "@/lib/pdf/generate-receipt";
 import type { ReceiptData } from "@/lib/pdf/receipt-template";
 import { formatDateShort } from "@/lib/utils";
 import { buildPaymentConfirmationMessage } from "@/lib/billing/messages";
-import { enqueueWhatsAppReceipt, enqueueWhatsAppPaymentConfirmation } from "@/lib/queue/producer";
+import { sendWhatsApp, sendWhatsAppDocument } from "@/lib/whatsapp";
+import { enqueueWhatsAppReceipt } from "@/lib/queue/producer";
 import { apiLogger } from "@/lib/logger";
 
 /** Load a payment with the relations needed to render a receipt. */
@@ -49,9 +50,11 @@ export function buildReceiptData(payment: ReceiptPayment, billing: Billing): Rec
 }
 
 /**
- * After a payment is marked paid, send the customer a WhatsApp confirmation
- * with the generated receipt (kwitansi) PDF attached. Falls back to a plain
- * text confirmation if PDF rendering fails. No-op if the customer has no phone.
+ * After a payment is marked paid, enqueue the WhatsApp confirmation + receipt.
+ * Thin on purpose: the heavy work (loading the payment, rendering the PDF,
+ * calling Fonnte) runs in the worker via {@link deliverPaidNotification}.
+ * Generating the PDF inline held the web request open across CPU-heavy
+ * rendering — which the Cloudflare tunnel 502s on this low-RAM box.
  *
  * Best-effort: failures here must not break the payment flow, so callers do
  * not need to await-throw on it.
@@ -60,42 +63,49 @@ export async function enqueuePaidNotification(
   paymentId: number,
   triggeredBy?: number
 ): Promise<void> {
+  await enqueueWhatsAppReceipt({ paymentId, triggeredBy });
+}
+
+/**
+ * Worker-side delivery of the paid notification: render the receipt PDF and
+ * send it to the customer with a confirmation caption. Falls back to a plain
+ * text confirmation if PDF rendering fails. No-op if the customer has no phone.
+ *
+ * Throws on a Fonnte send failure so BullMQ retries the job.
+ */
+export async function deliverPaidNotification(paymentId: number) {
   const payment = await loadReceiptPayment(paymentId);
-  if (!payment || !payment.customer.phone) return;
+  if (!payment || !payment.customer.phone) {
+    return { skipped: true as const };
+  }
 
   const billing = await getBillingConfig();
-  const amount = Number(payment.amount);
   const caption = buildPaymentConfirmationMessage({
     customerName: payment.customer.name,
     invoiceNumber: payment.invoiceNumber,
-    amount,
+    amount: Number(payment.amount),
     periodMonth: payment.periodMonth,
     companyName: billing.companyName,
     paymentMethod: payment.paymentMethod,
   });
 
+  let pdf: Buffer | null = null;
   try {
-    const pdf = await generateReceiptPdf(buildReceiptData(payment, billing));
-    await enqueueWhatsAppReceipt({
-      customerPhone: payment.customer.phone,
-      caption,
-      filename: `kwitansi-${payment.invoiceNumber}.pdf`,
-      fileBase64: pdf.toString("base64"),
-      triggeredBy,
-    });
+    pdf = await generateReceiptPdf(buildReceiptData(payment, billing));
   } catch (err) {
     apiLogger.warn(
       { err, paymentId },
       "receipt PDF generation failed; sending text-only confirmation"
     );
-    await enqueueWhatsAppPaymentConfirmation({
-      customerPhone: payment.customer.phone,
-      customerName: payment.customer.name,
-      invoiceNumber: payment.invoiceNumber,
-      amount,
-      periodMonth: payment.periodMonth,
-      paymentMethod: payment.paymentMethod,
-      triggeredBy,
-    });
   }
+
+  if (pdf) {
+    return sendWhatsAppDocument(
+      payment.customer.phone,
+      caption,
+      pdf,
+      `kwitansi-${payment.invoiceNumber}.pdf`
+    );
+  }
+  return sendWhatsApp(payment.customer.phone, caption);
 }

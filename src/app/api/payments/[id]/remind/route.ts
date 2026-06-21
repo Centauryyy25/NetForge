@@ -5,14 +5,13 @@ import { payments } from "@/db/schema/payments";
 import { requireRole } from "@/lib/auth-guard";
 import { withErrorHandler } from "@/lib/api-handler";
 import { getBillingConfig } from "@/lib/settings";
-import { sendWhatsApp } from "@/lib/whatsapp";
 import {
-  buildBillingMessage,
-  buildOverdueMessage,
-} from "@/lib/billing/messages";
+  enqueueWhatsAppBilling,
+  enqueueWhatsAppOverdueReminder,
+} from "@/lib/queue/producer";
 
 export const POST = withErrorHandler<{ id: string }>(async (_req, { params }) => {
-  await requireRole(["admin", "operator"]);
+  const session = await requireRole(["admin", "operator"]);
 
   const { id } = await params;
   const paymentId = parseInt(id);
@@ -42,33 +41,34 @@ export const POST = withErrorHandler<{ id: string }>(async (_req, { params }) =>
     );
   }
 
-  // Send synchronously so the operator gets the real Fonnte result immediately
-  // (success or the actual rejection reason), like the /settings test. Bulk and
-  // generate paths stay async via the queue.
-  const { companyName } = await getBillingConfig();
-  const messageParams = {
+  // Enqueue and return immediately — same as bulk-remind. Calling Fonnte inline
+  // held the HTTP request open across an external call; on this box's flaky
+  // uplink the Cloudflare tunnel dropped the in-flight request and the browser
+  // got an HTML 502. The worker now owns the send: it treats `status:false` as a
+  // failure and BullMQ retries, so a queued reminder isn't silently lost.
+  const { dueDay } = await getBillingConfig();
+  const triggeredBy = parseInt(session.user.id);
+
+  const baseJob = {
+    customerPhone: payment.customer.phone,
     customerName: payment.customer.name,
     invoiceNumber: payment.invoiceNumber,
     amount: Number(payment.amount),
     periodMonth: payment.periodMonth,
-    companyName,
+    triggeredBy,
   };
-  const message =
-    payment.status === "overdue"
-      ? buildOverdueMessage(messageParams)
-      : buildBillingMessage(messageParams);
 
-  try {
-    await sendWhatsApp(payment.customer.phone, message);
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return NextResponse.json(
-      { error: `Gagal mengirim pengingat: ${reason}` },
-      { status: 502 }
-    );
+  if (payment.status === "overdue") {
+    await enqueueWhatsAppOverdueReminder({ ...baseJob, dueDay });
+  } else {
+    await enqueueWhatsAppBilling(baseJob);
   }
 
-  return NextResponse.json({
-    message: `Pengingat tagihan dikirim ke ${payment.customer.name}`,
-  });
+  // 202: accepted for async delivery, not yet confirmed sent.
+  return NextResponse.json(
+    {
+      message: `Pengingat tagihan untuk ${payment.customer.name} sedang dikirim`,
+    },
+    { status: 202 }
+  );
 });

@@ -84,11 +84,14 @@ export interface WhatsAppPaymentConfirmationJob extends BaseJobData {
 }
 
 export interface WhatsAppReceiptJob extends BaseJobData {
-  customerPhone: string;
-  caption: string;
-  filename: string;
-  /** Receipt PDF encoded as base64 (passed through Redis). */
-  fileBase64: string;
+  /**
+   * The worker loads the payment and renders the receipt PDF itself. We pass
+   * only the id — generating the PDF in the web request held the HTTP
+   * connection open across CPU-heavy rendering (tunnel 502s on this low-RAM
+   * box), and base64-encoding the PDF into the job bloated Redis (128 MB,
+   * noeviction).
+   */
+  paymentId: number;
 }
 
 export type MarkOverdueJob = BaseJobData;
