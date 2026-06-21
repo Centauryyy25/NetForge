@@ -67,6 +67,26 @@ describe("sendWhatsApp", () => {
     ).rejects.toThrow(/Fonnte API error 500/);
   });
 
+  it("throws when Fonnte rejects with status:false on a 200 response", async () => {
+    getFonnteConfig.mockResolvedValue({
+      apiUrl: "https://api.fonnte.com/send",
+      token: "tok",
+    });
+    const fetchMock: FetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            status: false,
+            reason: "request invalid on disconnected device",
+          }),
+          { status: 200 }
+        )
+    );
+    await expect(
+      sendWhatsApp("0812", "halo", fetchMock as unknown as typeof fetch)
+    ).rejects.toThrow(/Fonnte menolak: request invalid on disconnected device/);
+  });
+
   it("aborts after timeout and rejects (does not hang)", async () => {
     getFonnteConfig.mockResolvedValue({
       apiUrl: "https://api.fonnte.com/send",
@@ -145,5 +165,29 @@ describe("sendWhatsAppDocument", () => {
     expect(form.get("file")).toBeInstanceOf(Blob);
     // Must not force JSON content-type (multipart boundary set by fetch).
     expect((call[1].headers as Record<string, string>)["Content-Type"]).toBeUndefined();
+  });
+
+  it("throws when Fonnte rejects with status:false on a 200 response", async () => {
+    getFonnteConfig.mockResolvedValue({
+      apiUrl: "https://api.fonnte.com/send",
+      token: "tok",
+    });
+    const fetchMock: FetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ status: false, reason: "disconnected device" }),
+          { status: 200 }
+        )
+    );
+    await expect(
+      sendWhatsAppDocument(
+        "0812",
+        "kwitansi",
+        Buffer.from("pdf"),
+        "kwitansi.pdf",
+        "application/pdf",
+        fetchMock as unknown as typeof fetch
+      )
+    ).rejects.toThrow(/Fonnte menolak: disconnected device/);
   });
 });

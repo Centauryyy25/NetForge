@@ -5,7 +5,24 @@ const DEFAULT_FONNTE_TIMEOUT_MS = 10_000;
 export interface FonnteResult {
   status: boolean;
   msg?: string;
+  reason?: string;
+  detail?: string;
   [key: string]: unknown;
+}
+
+/**
+ * Throw if Fonnte rejected the request. Fonnte answers HTTP 200 with
+ * `{ status: false, reason }` on failures (disconnected device, invalid
+ * number, quota exhausted, …). Without this the caller treats a rejection as
+ * success — BullMQ marks the job completed with no retry and the UI lies
+ * ("terkirim"). Throwing lets the queue retry and surfaces the real reason.
+ */
+function assertFonnteAccepted(result: FonnteResult): void {
+  if (result.status === false) {
+    throw new Error(
+      `Fonnte menolak: ${result.reason || result.detail || "status false"}`
+    );
+  }
 }
 
 /**
@@ -49,7 +66,9 @@ export async function sendWhatsApp(
       );
     }
 
-    return (await res.json()) as FonnteResult;
+    const result = (await res.json()) as FonnteResult;
+    assertFonnteAccepted(result);
+    return result;
   } finally {
     clearTimeout(timer);
   }
@@ -105,7 +124,9 @@ export async function sendWhatsAppDocument(
       );
     }
 
-    return (await res.json()) as FonnteResult;
+    const result = (await res.json()) as FonnteResult;
+    assertFonnteAccepted(result);
+    return result;
   } finally {
     clearTimeout(timer);
   }

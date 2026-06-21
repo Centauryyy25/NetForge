@@ -5,13 +5,14 @@ import { payments } from "@/db/schema/payments";
 import { requireRole } from "@/lib/auth-guard";
 import { withErrorHandler } from "@/lib/api-handler";
 import { getBillingConfig } from "@/lib/settings";
+import { sendWhatsApp } from "@/lib/whatsapp";
 import {
-  enqueueWhatsAppBilling,
-  enqueueWhatsAppOverdueReminder,
-} from "@/lib/queue/producer";
+  buildBillingMessage,
+  buildOverdueMessage,
+} from "@/lib/billing/messages";
 
 export const POST = withErrorHandler<{ id: string }>(async (_req, { params }) => {
-  const session = await requireRole(["admin", "operator"]);
+  await requireRole(["admin", "operator"]);
 
   const { id } = await params;
   const paymentId = parseInt(id);
@@ -41,21 +42,30 @@ export const POST = withErrorHandler<{ id: string }>(async (_req, { params }) =>
     );
   }
 
-  const triggeredBy = parseInt(session.user.id);
-  const baseJob = {
-    customerPhone: payment.customer.phone,
+  // Send synchronously so the operator gets the real Fonnte result immediately
+  // (success or the actual rejection reason), like the /settings test. Bulk and
+  // generate paths stay async via the queue.
+  const { companyName } = await getBillingConfig();
+  const messageParams = {
     customerName: payment.customer.name,
     invoiceNumber: payment.invoiceNumber,
     amount: Number(payment.amount),
     periodMonth: payment.periodMonth,
-    triggeredBy,
+    companyName,
   };
+  const message =
+    payment.status === "overdue"
+      ? buildOverdueMessage(messageParams)
+      : buildBillingMessage(messageParams);
 
-  if (payment.status === "overdue") {
-    const { dueDay } = await getBillingConfig();
-    await enqueueWhatsAppOverdueReminder({ ...baseJob, dueDay });
-  } else {
-    await enqueueWhatsAppBilling(baseJob);
+  try {
+    await sendWhatsApp(payment.customer.phone, message);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return NextResponse.json(
+      { error: `Gagal mengirim pengingat: ${reason}` },
+      { status: 502 }
+    );
   }
 
   return NextResponse.json({
