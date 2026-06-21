@@ -1,0 +1,63 @@
+name: Build & Push Image
+
+# Builds a linux/arm64 image (the production box is aarch64) and pushes it to
+# GHCR so the box can `docker compose pull && up -d` instead of building on-box.
+# On-box builds thrash the 1.8 GB host and have caused multi-hour outages.
+
+on:
+  push:
+    branches: [fix/production-deploy, main]
+  workflow_dispatch:
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    name: Build & push arm64 image
+    # Native arm64 runner — no QEMU emulation, so the Next.js build runs at full
+    # speed. Free for public repos; if this repo is private, switch to
+    # `ubuntu-latest` + a `docker/setup-qemu-action@v3` step (slower).
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GHCR requires a lowercase image path; the repo owner has capitals.
+      - name: Compute lowercase image name
+        id: img
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Derive tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ steps.img.outputs.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=sha
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

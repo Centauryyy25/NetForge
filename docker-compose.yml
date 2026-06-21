@@ -50,9 +50,11 @@ services:
 
   # ── Database Migrations (run-once) ──────────
   migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # Pulled from GHCR (built off-box by .github/workflows/deploy-image.yml).
+    # NEVER build this image on the box — it OOM-thrashes the 1.8 GB host.
+    # Pin a specific build by exporting NETFORGE_IMAGE=ghcr.io/centauryyy25/netforge:sha-<...>.
+    # web/worker/migrate share one image; they differ only by entrypoint below.
+    image: ${NETFORGE_IMAGE:-ghcr.io/centauryyy25/netforge:latest}
     container_name: siybynet-migrate
     environment:
       NODE_ENV: production
@@ -67,9 +69,7 @@ services:
 
   # ── Next.js Web App ─────────────────────────
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${NETFORGE_IMAGE:-ghcr.io/centauryyy25/netforge:latest}
     container_name: siybynet-web
     restart: unless-stopped
     ports:
@@ -102,9 +102,7 @@ services:
 
   # ── BullMQ Worker ───────────────────────────
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${NETFORGE_IMAGE:-ghcr.io/centauryyy25/netforge:latest}
     container_name: siybynet-worker
     restart: unless-stopped
     entrypoint: ["node", "node_modules/tsx/dist/cli.mjs", "src/workers/index.ts"]
