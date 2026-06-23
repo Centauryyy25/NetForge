@@ -21,6 +21,7 @@ const POLL_INTERVAL_MS = 30_000; // 30 seconds — safe for production
 
 interface Connection {
   name: string;
+  customerName: string;
   address: string;
   callerId: string;
   uptime: string;
@@ -28,6 +29,7 @@ interface Connection {
   maxLimit: string;
   txRate: number;
   rxRate: number;
+  status: "online" | "offline";
 }
 
 interface Summary {
@@ -245,19 +247,20 @@ export function BandwidthMonitor() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Koneksi PPPoE Aktif ({connections.length})
+            Koneksi PPPoE ({summary?.online ?? 0}/{connections.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {connections.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              Tidak ada koneksi aktif saat ini
+              Belum ada pelanggan PPPoE terdaftar
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
+                    <th className="pb-3 font-medium text-muted-foreground">Pelanggan</th>
                     <th className="pb-3 font-medium text-muted-foreground">Username</th>
                     <th className="pb-3 font-medium text-muted-foreground">IP Address</th>
                     <th className="pb-3 font-medium text-muted-foreground">Uptime</th>
@@ -268,25 +271,38 @@ export function BandwidthMonitor() {
                   </tr>
                 </thead>
                 <tbody>
-                  {connections.map((conn) => (
-                    <tr key={conn.name} className="border-b last:border-0">
-                      <td className="py-3 font-medium">{conn.name}</td>
-                      <td className="py-3 font-mono text-xs">{conn.address}</td>
-                      <td className="py-3">{conn.uptime}</td>
-                      <td className="py-3 font-mono text-xs">{conn.callerId}</td>
-                      <td className="py-3 text-right font-mono text-xs">
-                        {formatBytes(conn.rxRate)}/s
-                      </td>
-                      <td className="py-3 text-right font-mono text-xs">
-                        {formatBytes(conn.txRate)}/s
-                      </td>
-                      <td className="py-3">
-                        <Badge variant="outline" className="border-emerald-500/50 text-emerald-600">
-                          Online
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
+                  {connections.map((conn) => {
+                    const offline = conn.status === "offline";
+                    return (
+                      <tr
+                        key={conn.name}
+                        className={`border-b last:border-0 ${offline ? "text-muted-foreground" : ""}`}
+                      >
+                        <td className="py-3">{conn.customerName}</td>
+                        <td className="py-3 font-medium">{conn.name}</td>
+                        <td className="py-3 font-mono text-xs">{conn.address}</td>
+                        <td className="py-3">{conn.uptime}</td>
+                        <td className="py-3 font-mono text-xs">{conn.callerId}</td>
+                        <td className="py-3 text-right font-mono text-xs">
+                          {offline ? "-" : `${formatBytes(conn.rxRate)}/s`}
+                        </td>
+                        <td className="py-3 text-right font-mono text-xs">
+                          {offline ? "-" : `${formatBytes(conn.txRate)}/s`}
+                        </td>
+                        <td className="py-3">
+                          {offline ? (
+                            <Badge variant="outline" className="border-muted-foreground/40 text-muted-foreground">
+                              Offline
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-emerald-500/50 text-emerald-600">
+                              Online
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
