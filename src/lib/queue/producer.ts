@@ -12,6 +12,8 @@ import {
   type DeleteQueueJob,
   type WhatsAppBillingJob,
   type WhatsAppOverdueReminderJob,
+  type WhatsAppPaymentConfirmationJob,
+  type WhatsAppReceiptJob,
   type MarkOverdueJob,
 } from "./jobs";
 
@@ -99,6 +101,24 @@ export async function enqueueWhatsAppBilling(data: WhatsAppBillingJob) {
 export async function enqueueWhatsAppOverdueReminder(data: WhatsAppOverdueReminderJob) {
   return notificationQueue.add(
     JOB_NAMES.WHATSAPP_OVERDUE_REMINDER,
+    data,
+    DEFAULT_JOB_OPTS
+  );
+}
+
+export async function enqueueWhatsAppPaymentConfirmation(
+  data: WhatsAppPaymentConfirmationJob
+) {
+  return notificationQueue.add(
+    JOB_NAMES.WHATSAPP_PAYMENT_CONFIRMATION,
+    data,
+    DEFAULT_JOB_OPTS
+  );
+}
+
+export async function enqueueWhatsAppReceipt(data: WhatsAppReceiptJob) {
+  return notificationQueue.add(
+    JOB_NAMES.WHATSAPP_RECEIPT,
     data,
     DEFAULT_JOB_OPTS
   );

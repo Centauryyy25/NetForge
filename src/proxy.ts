@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import type { Role } from "@/lib/constants";
 
 // Public routes that don't require authentication
-const publicPaths = ["/login", "/api/auth"];
+const publicPaths = ["/login", "/api/auth", "/api/health"];
 
 // Role-based access control for dashboard routes
 const roleAccess: Record<string, Role[]> = {

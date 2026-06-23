@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { readApiError } from "@/lib/http/read-api-error";
 
 interface CancelPaymentButtonProps {
   paymentId: number;
@@ -26,8 +27,7 @@ export function CancelPaymentButton({ paymentId }: CancelPaymentButtonProps) {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Gagal membatalkan");
+        throw new Error(await readApiError(res, "Gagal membatalkan"));
       }
 
       toast.success("Tagihan berhasil dibatalkan");

@@ -16,6 +16,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { formatRupiah, formatDateShort } from "@/lib/utils";
 import { RecordPaymentDialog } from "@/components/dialogs/record-payment-dialog";
 import { CancelPaymentButton } from "@/components/dialogs/cancel-payment-button";
+import { SendReminderButton } from "@/components/dialogs/send-reminder-button";
 
 export const metadata: Metadata = {
   title: "Detail Pembayaran",
@@ -151,6 +152,9 @@ export default async function PaymentDetailPage({ params }: Props) {
         )}
         {isPending && (
           <RecordPaymentDialog paymentId={payment.id} currentStatus={payment.status} />
+        )}
+        {isPending && payment.customer.phone && (
+          <SendReminderButton paymentId={payment.id} />
         )}
         {isPending && (
           <CancelPaymentButton paymentId={payment.id} />

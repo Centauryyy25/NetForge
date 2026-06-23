@@ -1,5 +1,7 @@
+// Load .env for local dev only; in production env vars come from the container.
+// Use require (not top-level await) so tsx's cjs transform can handle this.
 if (process.env.NODE_ENV !== "production") {
-  await import("dotenv/config");
+  require("dotenv/config");
 }
 
 import { mikrotikWorker } from "./mikrotik.worker";

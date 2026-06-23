@@ -23,6 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { readApiError } from "@/lib/http/read-api-error";
 
 interface RecordPaymentDialogProps {
   paymentId: number;
@@ -59,8 +60,7 @@ export function RecordPaymentDialog({
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Gagal mencatat pembayaran");
+        throw new Error(await readApiError(res, "Gagal mencatat pembayaran"));
       }
 
       toast.success("Pembayaran berhasil dicatat sebagai lunas");

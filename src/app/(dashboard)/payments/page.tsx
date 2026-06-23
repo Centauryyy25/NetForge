@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PaymentTable } from "@/components/tables/payment-table";
 import { PaymentFilters } from "@/components/tables/payment-filters";
 import { MarkOverdueButton } from "@/components/dialogs/mark-overdue-button";
+import { BulkRemindButton } from "@/components/dialogs/bulk-remind-button";
 import { db } from "@/db";
 import { payments } from "@/db/schema/payments";
 import { eq, gte, lte, type SQL } from "drizzle-orm";
@@ -81,6 +82,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
       <PaymentFilters />
 
       <div className="flex justify-end gap-2">
+        <BulkRemindButton periodMonth={params.periodMonth} />
         <MarkOverdueButton />
         <Button
           variant="outline"

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { payments } from "@/db/schema/payments";
 import { requireAuth, requireRole } from "@/lib/auth-guard";
 import { withErrorHandler } from "@/lib/api-handler";
+import { enqueuePaidNotification } from "@/lib/billing/receipt";
 import { eq } from "drizzle-orm";
 
 export const GET = withErrorHandler<{ id: string }>(async (_req, { params }) => {
@@ -26,7 +27,7 @@ export const GET = withErrorHandler<{ id: string }>(async (_req, { params }) => 
 });
 
 export const PATCH = withErrorHandler<{ id: string }>(async (req, { params }) => {
-  await requireRole(["admin", "operator"]);
+  const session = await requireRole(["admin", "operator"]);
 
   const { id } = await params;
   const paymentId = parseInt(id);
@@ -68,6 +69,11 @@ export const PATCH = withErrorHandler<{ id: string }>(async (req, { params }) =>
     .set(updateData)
     .where(eq(payments.id, paymentId))
     .returning();
+
+  // On transition to paid, auto-send WhatsApp confirmation + receipt PDF.
+  if (status === "paid" && existing.status !== "paid") {
+    await enqueuePaidNotification(paymentId, parseInt(session.user.id));
+  }
 
   return NextResponse.json({ data: updated[0] });
 });

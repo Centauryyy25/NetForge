@@ -55,6 +55,8 @@ export function SettingsForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isTestingWa, setIsTestingWa] = useState(false);
+  const [waTestPhone, setWaTestPhone] = useState("");
   const [connected, setConnected] = useState<boolean | null>(null);
   const [routerInfo, setRouterInfo] = useState<MikroTikStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -161,6 +163,41 @@ export function SettingsForm() {
       setErrorMessage("Tidak dapat terhubung ke server");
     } finally {
       setIsTesting(false);
+    }
+  }
+
+  async function testWhatsApp() {
+    const phone = waTestPhone.trim();
+    if (!phone) {
+      toast.error("Masukkan nomor tujuan untuk tes WhatsApp");
+      return;
+    }
+    if (!form.fonnteToken) {
+      toast.error("Isi token Fonnte terlebih dahulu");
+      return;
+    }
+
+    setIsTestingWa(true);
+    try {
+      const res = await fetch("/api/settings/test-whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone,
+          token: form.fonnteToken,
+          apiUrl: form.fonnteApiUrl,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(`Pesan tes terkirim ke ${phone}`);
+      } else {
+        toast.error(json.error || "Gagal mengirim pesan tes");
+      }
+    } catch {
+      toast.error("Tidak dapat terhubung ke server");
+    } finally {
+      setIsTestingWa(false);
     }
   }
 
@@ -388,6 +425,37 @@ export function SettingsForm() {
               value={form.fonnteToken}
               onChange={(e) => updateField("fonnteToken", e.target.value)}
             />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="wa-test-phone">Tes Koneksi WhatsApp</Label>
+            <div className="flex gap-2">
+              <Input
+                id="wa-test-phone"
+                placeholder="08xxxxxxxxxx"
+                value={waTestPhone}
+                onChange={(e) => setWaTestPhone(e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isTestingWa}
+                onClick={testWhatsApp}
+              >
+                {isTestingWa ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                )}
+                Kirim Tes
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Kirim pesan tes ke nomor ini untuk memastikan gateway Fonnte aktif
+              dan perangkat WhatsApp terhubung.
+            </p>
           </div>
         </CardContent>
       </Card>

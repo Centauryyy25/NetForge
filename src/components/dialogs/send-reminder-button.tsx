@@ -2,28 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { MessageSquare, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { readApiError } from "@/lib/http/read-api-error";
 
-export function MarkOverdueButton() {
+export function SendReminderButton({ paymentId }: { paymentId: number }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleMarkOverdue() {
-    if (!confirm("Cek dan tandai semua tagihan yang melewati jatuh tempo sebagai tunggakan?")) {
-      return;
-    }
-
+  async function handleRemind() {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/payments/mark-overdue", {
+      const res = await fetch(`/api/payments/${paymentId}/remind`, {
         method: "POST",
       });
 
       if (!res.ok) {
-        throw new Error(await readApiError(res, "Gagal menandai tunggakan"));
+        throw new Error(await readApiError(res, "Gagal mengirim pengingat"));
       }
 
       const json = await res.json();
@@ -31,7 +27,7 @@ export function MarkOverdueButton() {
       router.refresh();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Gagal menandai tunggakan"
+        err instanceof Error ? err.message : "Gagal mengirim pengingat"
       );
     } finally {
       setIsLoading(false);
@@ -39,13 +35,13 @@ export function MarkOverdueButton() {
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={handleMarkOverdue} disabled={isLoading}>
+    <Button variant="outline" onClick={handleRemind} disabled={isLoading}>
       {isLoading ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
       ) : (
-        <AlertTriangle className="mr-2 h-4 w-4" />
+        <MessageSquare className="mr-2 h-4 w-4" />
       )}
-      Cek Tunggakan
+      Tagih via WhatsApp
     </Button>
   );
 }
