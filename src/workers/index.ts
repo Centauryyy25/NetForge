@@ -1,6 +1,4 @@
-if (process.env.NODE_ENV !== "production") {
-  await import("dotenv/config");
-}
+import "dotenv/config";
 
 import { mikrotikWorker } from "./mikrotik.worker";
 import { notificationWorker } from "./notification.worker";

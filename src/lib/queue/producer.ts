@@ -89,11 +89,16 @@ export async function enqueueDeleteQueue(data: DeleteQueueJob) {
 }
 
 export async function enqueueWhatsAppBilling(data: WhatsAppBillingJob) {
-  return notificationQueue.add(
-    JOB_NAMES.WHATSAPP_BILLING,
-    data,
-    DEFAULT_JOB_OPTS
-  );
+  try {
+    return await notificationQueue.add(
+      JOB_NAMES.WHATSAPP_BILLING,
+      data,
+      DEFAULT_JOB_OPTS
+    );
+  } catch (err) {
+    console.error("Redis down, failed to enqueue WhatsApp Billing:", err);
+    return null;
+  }
 }
 
 export async function enqueueWhatsAppOverdueReminder(data: WhatsAppOverdueReminderJob) {

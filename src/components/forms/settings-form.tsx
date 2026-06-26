@@ -58,6 +58,8 @@ export function SettingsForm() {
   const [connected, setConnected] = useState<boolean | null>(null);
   const [routerInfo, setRouterInfo] = useState<MikroTikStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isTestingFonnte, setIsTestingFonnte] = useState(false);
+  const [fonnteTestPhone, setFonnteTestPhone] = useState("");
 
   const [form, setForm] = useState<SettingsData>({
     mikrotikHost: "",
@@ -121,6 +123,39 @@ export function SettingsForm() {
 
   function updateField(key: keyof SettingsData, value: string | number) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function testFonnteConnection() {
+    if (!form.fonnteToken || !fonnteTestPhone) {
+      toast.error("Token Fonnte dan Nomor WA tujuan wajib diisi");
+      return;
+    }
+
+    setIsTestingFonnte(true);
+
+    try {
+      const res = await fetch("/api/settings/test-fonnte", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiUrl: form.fonnteApiUrl,
+          token: form.fonnteToken,
+          phone: fonnteTestPhone,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (json.success) {
+        toast.success("Pesan percobaan berhasil terkirim!");
+      } else {
+        toast.error(json.error || "Gagal mengirim pesan percobaan");
+      }
+    } catch {
+      toast.error("Terjadi kesalahan saat menguji Fonnte");
+    } finally {
+      setIsTestingFonnte(false);
+    }
   }
 
   async function testConnection(overrideData?: SettingsData) {
@@ -388,6 +423,37 @@ export function SettingsForm() {
               value={form.fonnteToken}
               onChange={(e) => updateField("fonnteToken", e.target.value)}
             />
+          </div>
+          
+          <Separator className="my-4" />
+          
+          <div className="space-y-2">
+            <Label htmlFor="fonnte-test-phone">Test WhatsApp</Label>
+            <div className="flex gap-2">
+              <Input
+                id="fonnte-test-phone"
+                placeholder="081234567890"
+                value={fonnteTestPhone}
+                onChange={(e) => setFonnteTestPhone(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={testFonnteConnection}
+                disabled={isTestingFonnte || !form.fonnteToken || !fonnteTestPhone}
+              >
+                {isTestingFonnte ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                )}
+                Test Pesan
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Masukkan nomor WA untuk menguji pengiriman (contoh: 081234567890)
+            </p>
           </div>
         </CardContent>
       </Card>
